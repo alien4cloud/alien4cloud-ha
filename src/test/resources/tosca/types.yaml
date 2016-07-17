@@ -1,0 +1,178 @@
+tosca_definitions_version: alien_dsl_1_1_0
+
+template_name: alien4cloud-ha
+template_version: 1.0.0-SNAPSHOT
+template_author: Fastconnect
+
+imports:
+  - "tosca-normative-types:1.0.0-SNAPSHOT"
+  - "jdk-type:1.0.0-SNAPSHOT"
+
+topology_template:
+
+  node_templates:
+    ConsulServerCompute:
+      type: tosca.nodes.Compute
+      capabilities:
+        scalable:
+          properties:
+            max_instances: 3
+            min_instances: 3
+            default_instances: 3
+    ConsulServer:
+      type: alien4cloud.consul.nodes.ConsulServer
+      requirements:
+        - host: ConsulServerCompute
+    ConsulClientCompute:
+      type: tosca.nodes.Compute
+    ConsulClient:
+      type: alien4cloud.consul.nodes.ConsulClient
+      requirements:
+        - host: ConsulClientCompute
+        - consul_server: ConsulServer
+    ElasticSearchCompute:
+      type: tosca.nodes.Compute
+      capabilities:
+        scalable:
+          properties:
+            max_instances: 2
+            min_instances: 2
+            default_instances: 2
+    ElasticSearchJDK:
+      type: alien.nodes.JDK
+      requirements:
+        - host: ElasticSearchCompute
+    ElasticSearch:
+      type: alien.nodes.ElasticSearch
+      requirements:
+        - java:
+            node: ElasticSearchJDK
+            capability: alien.capabilities.JDK
+            relationship: alien.relationships.JavaSoftwareHostedOnJDK
+
+node_types:
+
+  alien4cloud.consul.nodes.ConsulAgent:
+    abstract: true
+    derived_from: tosca.nodes.SoftwareComponent
+    description: >
+      Consul discovery service installation
+    tags:
+      icon: /images/consul.png
+    properties:
+      download_url:
+        type: string
+        default: https://releases.hashicorp.com/consul/0.6.4/consul_0.6.4_linux_amd64.zip
+      data_dir:
+        type: string
+        default: /var/consul
+    attributes:
+      consul_client_address: { get_operation_output: [ SELF, Standard, start, CONSUL_CLIENT_ADDRESS ] }
+      consul_server_address: { get_operation_output: [ SELF, Standard, start, CONSUL_SERVER_ADDRESS ] }
+
+  alien4cloud.consul.nodes.ConsulServer:
+    derived_from: alien4cloud.consul.nodes.ConsulAgent
+    description: >
+      Consul discovery service installation (server node)
+    properties:
+      agent_mode:
+        type: string
+        constraints:
+          - equal: server
+        default: server
+    capabilities:
+      consul_server: alien4cloud.consul.capabilities.ConsulServer
+    interfaces:
+      Standard:
+        create:
+          inputs:
+            CONSUL_DATA_DIR: { get_property: [SELF, data_dir] }
+            CONSUL_DOWNLOAD_URL: { get_property: [SELF, download_url] }
+          implementation: scripts/consul/create_consul.sh
+        configure:
+          inputs:
+            CONSUL_AGENT_MODE: { get_property: [SELF, agent_mode] }
+            CONSUL_DATA_DIR: { get_property: [SELF, data_dir] }
+            CONSUL_BIND_ADDRESS: { get_attribute: [HOST, ip_address] }
+          implementation: scripts/consul/start_consul_agent.sh
+        start:
+          inputs:
+            CONSUL_ADDRESS: { get_attribute: [HOST, ip_address] }
+          implementation: scripts/consul/join_consul_servers.sh
+
+  alien4cloud.consul.nodes.ConsulClient:
+    derived_from: alien4cloud.consul.nodes.ConsulAgent
+    description: >
+      Consul discovery service installation (client node)
+    properties:
+      agent_mode:
+        type: string
+        constraints:
+          - equal: client
+        default: client
+    requirements:
+      - consul_server: alien4cloud.consul.capabilities.ConsulServer
+        type: alien4cloud.consul.relationships.JoinCluster
+    interfaces:
+      Standard:
+        create:
+          inputs:
+            CONSUL_DATA_DIR: { get_property: [SELF, data_dir] }
+            CONSUL_DOWNLOAD_URL: { get_property: [SELF, download_url] }
+          implementation: scripts/consul/create_consul.sh
+        start:
+          inputs:
+            CONSUL_AGENT_MODE: { get_property: [SELF, agent_mode] }
+            CONSUL_DATA_DIR: { get_property: [SELF, data_dir] }
+            CONSUL_BIND_ADDRESS: { get_attribute: [HOST, ip_address] }
+          implementation: scripts/consul/start_consul_agent.sh
+
+  alien.nodes.ElasticSearch:
+    derived_from: alien.nodes.JavaSoftware
+    description: >
+      Installation of ElasticSearch
+    tags:
+      icon: images/elasticsearch.png
+    properties:
+      elasticsearch_url:
+        type: string
+        required: true
+        default: "https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.7.0.deb"
+    capabilities:
+      elasticsearch:
+        type: alien.capabilities.ElasticSearch
+        upper_bound: unbounded
+    interfaces:
+      Standard:
+        create:
+          inputs:
+            APPLICATION_URL: { get_property: [SELF, elasticsearch_url] }
+          implementation: scripts/elasticsearch/install_elasticsearch.sh
+        configure:
+          inputs:
+            ES_IP: { get_attribute: [HOST, ip_address] }
+          implementation: scripts/elasticsearch/configure_elasticsearch.sh
+        start:
+          implementation: scripts/elasticsearch/start_elasticsearch.sh
+    artifacts:
+      - configs: config/elasticsearch
+        type: tosca.artifacts.File
+
+capability_types:
+
+  alien4cloud.consul.capabilities.ConsulServer:
+    derived_from: tosca.capabilities.Root
+  alien.capabilities.ElasticSearch:
+    derived_from: tosca.capabilities.Root
+
+relationship_types:
+
+  alien4cloud.consul.relationships.JoinCluster:
+    derived_from: tosca.relationships.ConnectsTo
+    valid_target_types: [alien4cloud.consul.capabilities.ConsulServer]
+    interfaces:
+      Configure:
+        add_target:
+          inputs:
+            CONSUL_SERVER_ADDRESS: { get_attribute: [TARGET, ip_address] }
+          implementation: scripts/consul/join_consul_cluster.sh
