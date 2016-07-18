@@ -1,0 +1,7 @@
+server {
+        listen %LISTEN_PORT%;
+        server_name %SERVER_NAME%;
+        location / {
+                proxy_pass      http://{{key "service/a4c/leader"}}:%SERVICE_PORT%/;
+        }
+}

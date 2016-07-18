@@ -6,3 +6,7 @@ echo "=========================== starting nginx ==========================="
 #sudo /etc/init.d/nginx status
 #sudo /etc/init.d/nginx start
 #sudo /etc/init.d/nginx reload
+
+#./consul-template -consul localhost:8500 -template "test.ctpl" -dry
+#
+# /etc/nginx/sites-enabled/default
