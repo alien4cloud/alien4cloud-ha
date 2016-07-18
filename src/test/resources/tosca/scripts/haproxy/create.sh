@@ -16,8 +16,8 @@ while sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1 ; do
     sleep 2
 done
 
-sudo apt-get -y update >/dev/null 2>&1
-sudo apt-get -y install haproxy >/dev/null 2>&1
+sudo apt-get -y update
+sudo apt-get -y install haproxy
 
 rm -rf "${LOCK}"
 echo "released apt lock"

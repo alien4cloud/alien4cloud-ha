@@ -1,16 +1,16 @@
-tosca_definitions_version: alien_dsl_1_1_0
 #tosca_definitions_version: alien_dsl_1_1_0
+tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
 
 template_name: alien4cloud-ha
 template_version: 1.0.0-SNAPSHOT
 template_author: Fastconnect
 
 imports:
-  - "tosca-normative-types:1.0.0-SNAPSHOT"
-  - "jdk-type:1.0.0-SNAPSHOT"
-#  - tosca-normative-types:*
-#  - docker-provider-types:*
-#  - jdk-type:*
+#  - "tosca-normative-types:1.0.0-SNAPSHOT"
+#  - "jdk-type:1.0.0-SNAPSHOT"
+  - tosca-normative-types:*
+  - docker-provider-types:*
+  - jdk-type:*
 
 topology_template:
 
@@ -30,44 +30,66 @@ topology_template:
   outputs:
     alien_url:
       description: The URL to access A4C
-      value: { get_attribute: [ Nginx, service_url ] }
+      value: { get_attribute: [ ReverseProxy, service_url ] }
   node_templates:
     Network:
-      type: tosca.nodes.Network
-#      type: com.toscaruntime.docker.nodes.Network
-#      properties:
-#        network_name: alienNet
-#        cidr: 10.67.79.0/24
+#      type: tosca.nodes.Network
+      type: com.toscaruntime.docker.nodes.Network
+      properties:
+        network_name: alienNet
+        cidr: 10.67.79.0/24
     ConsulServerCompute:
-      type: tosca.nodes.Compute
-#      type: com.toscaruntime.docker.nodes.Container
-#      properties:
-#        image_id: toscaruntime/ubuntu-trusty
+#      type: tosca.nodes.Compute
+      type: com.toscaruntime.docker.nodes.Container
+      properties:
+        image_id: toscaruntime/ubuntu-trusty
       capabilities:
         scalable:
           properties:
             max_instances: 3
             min_instances: 3
             default_instances: 3
-    ConsulServer:
-      type: alien4cloud.consul.nodes.ConsulServer
-      requirements:
-        - host: ConsulServerCompute
+    ElasticSearchCompute:
+#      type: tosca.nodes.Compute
+      type: com.toscaruntime.docker.nodes.Container
+      properties:
+        image_id: toscaruntime/ubuntu-trusty
+      capabilities:
+        scalable:
+          properties:
+            max_instances: 2
+            min_instances: 2
+            default_instances: 2
     ReverseProxyCompute:
-      type: tosca.nodes.Compute
-#      type: com.toscaruntime.docker.nodes.Container
-#      properties:
-#        image_id: toscaruntime/ubuntu-trusty
-#        exposed_ports:
-#          - port: 8080
-#        port_mappings:
-#          - from: 8080
-#            to: 50001
+#      type: tosca.nodes.Compute
+      type: com.toscaruntime.docker.nodes.Container
+      properties:
+        image_id: toscaruntime/ubuntu-trusty
+        exposed_ports:
+          - port: 8080
+        port_mappings:
+          - from: 8080
+            to: 50001
       requirements:
         - network:
             node: Network
             capability: tosca.capabilities.Connectivity
-            relationship: tosca.relationships.Network
+            relationship: tosca.relationships.Network  
+    AlienCompute:
+      #type: tosca.nodes.Compute
+      type: com.toscaruntime.docker.nodes.Container
+      properties:
+        image_id: toscaruntime/ubuntu-trusty
+      capabilities:
+        scalable:
+          properties:
+            max_instances: 10
+            min_instances: 2
+            default_instances: 2          
+    ConsulServer:
+      type: alien4cloud.consul.nodes.ConsulServer
+      requirements:
+        - host: ConsulServerCompute
     ReverseProxyConsulClient:
       type: alien4cloud.consul.nodes.ConsulClient
       requirements:
@@ -81,7 +103,7 @@ topology_template:
             node: ReverseProxyConsulClient
             capability: tosca.capabilities.Node
             relationship: tosca.relationships.DependsOn
-    HAProxy:
+    ReverseProxy:
       type: alien.ha.types.HAProxy
       properties:
         service_name: { get_input: service_name }
@@ -98,17 +120,6 @@ topology_template:
             node: Alien
             capability: tosca.capabilities.Node
             relationship: tosca.relationships.DependsOn
-    AlienCompute:
-      type: tosca.nodes.Compute
-#      type: com.toscaruntime.docker.nodes.Container
-#      properties:
-#        image_id: toscaruntime/ubuntu-trusty
-      capabilities:
-        scalable:
-          properties:
-            max_instances: 10
-            min_instances: 2
-            default_instances: 2
     AlienJDK:
       type: alien.nodes.JDK
       requirements:
@@ -139,17 +150,6 @@ topology_template:
             node: AlienConsulClient
             capability: alien4cloud.consul.capabilities.ConsulAgent
             relationship: alien4cloud.consul.relationships.ConnectToConsulAgent
-    ElasticSearchCompute:
-      type: tosca.nodes.Compute
-#      type: com.toscaruntime.docker.nodes.Container
-#      properties:
-#        image_id: toscaruntime/ubuntu-trusty
-      capabilities:
-        scalable:
-          properties:
-            max_instances: 2
-            min_instances: 2
-            default_instances: 2
     ElasticSearchJDK:
       type: alien.nodes.JDK
       requirements:
