@@ -1,4 +1,4 @@
-tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
+tosca_definitions_version: alien_dsl_1_1_0
 #tosca_definitions_version: alien_dsl_1_1_0
 
 template_name: alien4cloud-ha
@@ -6,11 +6,11 @@ template_version: 1.0.0-SNAPSHOT
 template_author: Fastconnect
 
 imports:
-#  - "tosca-normative-types:1.0.0-SNAPSHOT"
-#  - "jdk-type:1.0.0-SNAPSHOT"
-  - tosca-normative-types:*
-  - docker-provider-types:* 
-  - jdk-type:* 
+  - "tosca-normative-types:1.0.0-SNAPSHOT"
+  - "jdk-type:1.0.0-SNAPSHOT"
+#  - tosca-normative-types:*
+#  - docker-provider-types:*
+#  - jdk-type:*
 
 topology_template:
 
@@ -18,7 +18,7 @@ topology_template:
     rproxy_port:
       type: integer
       required: true
-      default: 8080    
+      default: 8080
     alien_port:
       type: integer
       required: true
@@ -27,18 +27,22 @@ topology_template:
       type: string
       required: true
       default: a4c_primary
-
+  outputs:
+    alien_url:
+      description: The URL to access A4C
+      value: { get_attribute: [ Nginx, service_url ] }
   node_templates:
     Network:
-      type: com.toscaruntime.docker.nodes.Network
-      properties:
-        network_name: alienNet
-        cidr: 10.67.79.0/24    
+      type: tosca.nodes.Network
+#      type: com.toscaruntime.docker.nodes.Network
+#      properties:
+#        network_name: alienNet
+#        cidr: 10.67.79.0/24
     ConsulServerCompute:
-#      type: tosca.nodes.Compute
-      type: com.toscaruntime.docker.nodes.Container
-      properties:
-        image_id: toscaruntime/ubuntu-trusty
+      type: tosca.nodes.Compute
+#      type: com.toscaruntime.docker.nodes.Container
+#      properties:
+#        image_id: toscaruntime/ubuntu-trusty
       capabilities:
         scalable:
           properties:
@@ -50,18 +54,20 @@ topology_template:
       requirements:
         - host: ConsulServerCompute
     ReverseProxyCompute:
-#      type: tosca.nodes.Compute
-      type: com.toscaruntime.docker.nodes.Container  
-      properties:
-        image_id: toscaruntime/ubuntu-trusty 
-        exposed_ports:
-          - port: 8080
-        port_mappings:
-          - from: 8080
-            to: 50001        
-
+      type: tosca.nodes.Compute
+#      type: com.toscaruntime.docker.nodes.Container
+#      properties:
+#        image_id: toscaruntime/ubuntu-trusty
+#        exposed_ports:
+#          - port: 8080
+#        port_mappings:
+#          - from: 8080
+#            to: 50001
       requirements:
-        - network: Network          
+        - network:
+            node: Network
+            capability: tosca.capabilities.Connectivity
+            relationship: tosca.relationships.Network
     ReverseProxyConsulClient:
       type: alien4cloud.consul.nodes.ConsulClient
       requirements:
@@ -70,10 +76,13 @@ topology_template:
     ReverseProxyDnsMasq:
       type: alien4cloud.consul.nodes.DnsMasq
       requirements:
-        - host: ReverseProxyCompute  
-        - dependency: ReverseProxyConsulClient
+        - host: ReverseProxyCompute
+        - dependency:
+            node: ReverseProxyConsulClient
+            capability: tosca.capabilities.Node
+            relationship: tosca.relationships.DependsOn
     Nginx:
-      type: alien.ha.types.Nginx             
+      type: alien.ha.types.Nginx
       properties:
         service_name: { get_input: service_name }
         domain_name: "service.consul"
@@ -81,23 +90,29 @@ topology_template:
         listen_port: { get_input: rproxy_port }
       requirements:
         - host: ReverseProxyCompute
-        - dependency: ReverseProxyDnsMasq 
-        - dependency: Alien 
+        - dependency:
+            node: ReverseProxyDnsMasq
+            capability: tosca.capabilities.Node
+            relationship: tosca.relationships.DependsOn
+        - dependency:
+            node: Alien
+            capability: tosca.capabilities.Node
+            relationship: tosca.relationships.DependsOn
     AlienCompute:
-#      type: tosca.nodes.Compute
-      type: com.toscaruntime.docker.nodes.Container
-      properties:
-        image_id: toscaruntime/ubuntu-trusty
+      type: tosca.nodes.Compute
+#      type: com.toscaruntime.docker.nodes.Container
+#      properties:
+#        image_id: toscaruntime/ubuntu-trusty
       capabilities:
         scalable:
           properties:
-            max_instances: 2
+            max_instances: 10
             min_instances: 2
-            default_instances: 2        
+            default_instances: 2
     AlienJDK:
       type: alien.nodes.JDK
       requirements:
-        - host: AlienCompute        
+        - host: AlienCompute
     AlienConsulClient:
       type: alien4cloud.consul.nodes.ConsulClient
       requirements:
@@ -106,8 +121,8 @@ topology_template:
     Alien:
       type: alien.nodes.Alien
       properties:
-        alien_url: https://fastconnect.org/owncloud/public.php?service=files&t=59c0ae3b1a41c50677e8804fb0254f1f&download 
-        app_args: "--spring.profiles.active=security-demo,noApiDoc" 
+        alien_url: https://fastconnect.org/owncloud/public.php?service=files&t=59c0ae3b1a41c50677e8804fb0254f1f&download
+        app_args: "--spring.profiles.active=security-demo,noApiDoc"
         alien_version: 1.3.0-SM2-SNAPSHOT
         listen_port: { get_input: alien_port }
         dns_service_name: { get_input: service_name }
@@ -116,16 +131,19 @@ topology_template:
             node: AlienJDK
             capability: alien.capabilities.JDK
             relationship: alien.relationships.JavaSoftwareHostedOnJDK
-        - elasticsearch: 
+        - elasticsearch:
             node: ElasticSearch
             capability: alien.capabilities.ElasticSearch
-            relationship: alien4cloud.relationships.ConnectToElasticSearch        
-        - consul: AlienConsulClient       
+            relationship: alien4cloud.relationships.ConnectToElasticSearch
+        - consul:
+            node: AlienConsulClient
+            capability: alien4cloud.consul.capabilities.ConsulAgent
+            relationship: alien4cloud.consul.relationships.ConnectToConsulAgent
     ElasticSearchCompute:
-#      type: tosca.nodes.Compute
-      type: com.toscaruntime.docker.nodes.Container
-      properties:
-        image_id: toscaruntime/ubuntu-trusty
+      type: tosca.nodes.Compute
+#      type: com.toscaruntime.docker.nodes.Container
+#      properties:
+#        image_id: toscaruntime/ubuntu-trusty
       capabilities:
         scalable:
           properties:
@@ -167,7 +185,7 @@ node_types:
     tags:
       icon: /images/consul.png
     capabilities:
-      consul_agent: alien4cloud.consul.capabilities.ConsulAgent      
+      consul_agent: alien4cloud.consul.capabilities.ConsulAgent
     properties:
       download_url:
         type: string
@@ -296,10 +314,10 @@ node_types:
         default: 8080
       alien_version:
         type: string
-        required: true        
+        required: true
       dns_service_name:
         type: string
-        required: true        
+        required: true
     capabilities:
       consul:
         type: alien4cloud.consul.capabilities.ConsulClient
@@ -307,13 +325,13 @@ node_types:
         type: alien.capabilities.ElasticSearchClient
     requirements:
       - elasticsearch: alien.capabilities.ElasticSearch
-        type: alien.relationships.ConnectToElasticSearch
+        type: alien4cloud.relationships.ConnectToElasticSearch
         lower_bound: 1
         upper_bound: 1
       - consul: alien4cloud.consul.capabilities.ConsulAgent
         type: alien4cloud.consul.relationships.ConnectToConsulAgent
         lower_bound: 0
-        upper_bound: 1         
+        upper_bound: 1
     interfaces:
       Standard:
         create:
@@ -322,7 +340,7 @@ node_types:
             APP_ARGS: { get_property: [SELF, app_args] }
             ALIEN_VERSION: { get_property: [SELF, alien_version] }
           implementation: scripts/alien/install_alien.sh
-        configure: 
+        configure:
           inputs:
             ALIEN_IP: { get_attribute: [HOST, ip_address] }
             ALIEN_PORT: { get_property: [SELF, listen_port] }
@@ -355,10 +373,12 @@ node_types:
         required: true
       domain_name:
         type: string
-        required: true        
+        required: true
       service_port:
         type: integer
         required: true
+    attributes:
+      service_url: { concat: ["http://", get_attribute: [HOST, public_ip_address], ":", get_property: [SELF, listen_port]] }
     interfaces:
       Standard:
         create:
@@ -368,7 +388,8 @@ node_types:
             LISTEN_PORT: { get_property: [SELF, listen_port] }
             CONF_PATH: { get_property: [SELF, conf_path] }
             SERVICE_FQN: { concat: [ get_property: [SELF, service_name], ".", get_property: [SELF, domain_name]] }
-            SERVICE_PORT: { get_property: [SELF, service_port] }           
+            SERVICE_PORT: { get_property: [SELF, service_port] }
+            SERVER_NAME: { get_attribute: [HOST, public_ip_address] }
           implementation: scripts/nginx/configure.sh
         start:
           implementation: scripts/nginx/start.sh
@@ -381,13 +402,13 @@ capability_types:
   alien4cloud.consul.capabilities.ConsulAgent:
     derived_from: tosca.capabilities.Root
   alien4cloud.consul.capabilities.ConsulClient:
-    derived_from: tosca.capabilities.Root    
+    derived_from: tosca.capabilities.Root
   alien4cloud.consul.capabilities.ConsulServer:
     derived_from: tosca.capabilities.Root
   alien.capabilities.ElasticSearch:
     derived_from: tosca.capabilities.Root
   alien.capabilities.ElasticSearchClient:
-    derived_from: tosca.capabilities.Root   
+    derived_from: tosca.capabilities.Root
 
 relationship_types:
 
@@ -414,4 +435,4 @@ relationship_types:
           inputs:
             ES_IP: { get_attribute: [TARGET, ip_address] }
             ES_PORT: { get_property: [TARGET, listen_port] }
-          implementation: scripts/elasticsearch/ConnectToElasticSearch/pre_configure_source.sh    
+          implementation: scripts/elasticsearch/ConnectToElasticSearch/pre_configure_source.sh

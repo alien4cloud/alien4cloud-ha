@@ -1,9 +1,6 @@
 #!/bin/bash -e
 
-
-sudo cat << EOF > /etc/dnsmasq.conf
-no-resolv
-no-hosts
-user=root
-server=/consul/127.0.0.1#8600
-EOF
+sudo /bin/su -c "echo 'no-resolv' > /etc/dnsmasq.conf"
+sudo /bin/su -c "echo 'no-hosts' >> /etc/dnsmasq.conf"
+sudo /bin/su -c "echo 'user=root' >> /etc/dnsmasq.conf"
+sudo /bin/su -c "echo 'server=/consul/127.0.0.1#8600' >> /etc/dnsmasq.conf"
