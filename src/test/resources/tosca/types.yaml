@@ -81,8 +81,8 @@ topology_template:
             node: ReverseProxyConsulClient
             capability: tosca.capabilities.Node
             relationship: tosca.relationships.DependsOn
-    Nginx:
-      type: alien.ha.types.Nginx
+    HAProxy:
+      type: alien.ha.types.HAProxy
       properties:
         service_name: { get_input: service_name }
         domain_name: "service.consul"
@@ -168,6 +168,8 @@ node_types:
     derived_from: tosca.nodes.SoftwareComponent
     description: >
       DNS Masq
+    tags:
+      icon: /images/dnsmasq.png
     interfaces:
       Standard:
         create:
@@ -395,6 +397,48 @@ node_types:
           implementation: scripts/nginx/start.sh
     artifacts:
       - config: config/nginx
+        type: tosca.artifacts.File
+
+  alien.ha.types.HAProxy:
+    derived_from: tosca.nodes.SoftwareComponent
+    tags:
+      icon: /images/haproxy.png
+    properties:
+      conf_path:
+        type: string
+        required: true
+        default: "/etc/haproxy/haproxy.cfg"
+      listen_port:
+        type: integer
+        required: true
+        default: 8080
+      service_name:
+        type: string
+        required: true
+      domain_name:
+        type: string
+        required: true
+      service_port:
+        type: integer
+        required: true
+    attributes:
+      service_url: { concat: ["http://", get_attribute: [HOST, public_ip_address], ":", get_property: [SELF, listen_port]] }
+    interfaces:
+      Standard:
+        create:
+          implementation: scripts/haproxy/create.sh
+        configure:
+          inputs:
+            LISTEN_PORT: { get_property: [SELF, listen_port] }
+            CONF_PATH: { get_property: [SELF, conf_path] }
+            SERVICE_FQN: { concat: [ get_property: [SELF, service_name], ".", get_property: [SELF, domain_name]] }
+            SERVICE_PORT: { get_property: [SELF, service_port] }
+            SERVER_NAME: { get_attribute: [HOST, public_ip_address] }
+          implementation: scripts/haproxy/configure.sh
+        start:
+          implementation: scripts/haproxy/start.sh
+    artifacts:
+      - config: config/haproxy
         type: tosca.artifacts.File
 
 capability_types:
