@@ -2,7 +2,7 @@
 
 sudo mkdir -p /etc/consul_template/
 sudo mkdir -p /var/lib/consul_template/
-sudo mkdir -p /var/log/consul-template/
+sudo mkdir -p /var/log/consul_template/
 
 LOCK="/tmp/lockaptget"
 

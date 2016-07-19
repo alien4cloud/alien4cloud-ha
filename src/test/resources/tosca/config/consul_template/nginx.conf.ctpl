@@ -2,6 +2,6 @@ server {
         listen %LISTEN_PORT%;
         server_name %SERVER_NAME%;
         location / {
-                proxy_pass      http://{{key "service/a4c/leader"}}/;
+                proxy_pass      http://{{key_or_default "service/a4c/leader" "alien4cloud.github.io"}}/;
         }
 }

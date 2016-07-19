@@ -11,8 +11,8 @@ IFS=',';
 for i in $TARGET_INSTANCES;
 do
   # TODO: remove if not uning TDK
-  varname="${SOURCE_INSTANCE}_${i}_ES_IP";
-  #varname="${i}_ES_IP";
+  #varname="${SOURCE_INSTANCE}_${i}_ES_IP";
+  varname="${i}_ES_IP";
   if [ ${instance_id} -eq 0 ]
     then
       es_list="${!varname}:${ES_PORT}"
