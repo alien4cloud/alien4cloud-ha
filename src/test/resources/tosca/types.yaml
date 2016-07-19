@@ -149,6 +149,8 @@ topology_template:
         - host: ElasticSearchCompute
     ElasticSearch:
       type: alien.nodes.ElasticSearch
+      properties:
+        cluster_name: "a4c_cluster"
       requirements:
         - java:
             node: ElasticSearchJDK
@@ -249,6 +251,10 @@ node_types:
         type: integer
         required: true
         default: 9300
+      cluster_name:
+        type: string
+        required: true
+        default: "escluster"
     capabilities:
       elasticsearch:
         type: alien.capabilities.ElasticSearch
@@ -262,6 +268,7 @@ node_types:
         configure:
           inputs:
             ES_IP: { get_attribute: [HOST, ip_address] }
+            CLUSTER_NAME: { get_property: [SELF, cluster_name] }
           implementation: scripts/elasticsearch/configure_elasticsearch.sh
         start:
           implementation: scripts/elasticsearch/start_elasticsearch.sh
@@ -418,4 +425,5 @@ relationship_types:
           inputs:
             ES_IP: { get_attribute: [TARGET, ip_address] }
             ES_PORT: { get_property: [TARGET, listen_port] }
+            CLUSTER_NAME: { get_property: [TARGET, cluster_name] }
           implementation: scripts/elasticsearch/ConnectToElasticSearch/pre_configure_source.sh

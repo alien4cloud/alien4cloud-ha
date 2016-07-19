@@ -1,5 +1,8 @@
 #!/bin/bash -e
 
+# set the cluster name
+sudo sed -i -e "s/cluster\.name\: \(.*\)$i/cluster\.name\: $CLUSTER_NAME/g" /etc/elasticsearch/elasticsearch.yml
+
 # Count the number of replicas
 number_of_replicas=$((0))
 es_ips=""
@@ -16,7 +19,7 @@ do
 		number_of_replicas=$((number_of_replicas + 1))
 		echo "Number of replicas is now ${number_of_replicas}"
 	fi
-done  
+done
 
 echo "List of replicas ips is finally ${es_ips}"
 echo "Number of replicas is finally ${number_of_replicas}"

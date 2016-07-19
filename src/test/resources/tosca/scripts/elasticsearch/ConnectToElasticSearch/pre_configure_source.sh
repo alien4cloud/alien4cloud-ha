@@ -1,4 +1,8 @@
 #!/bin/bash -e
+
+# export the cluster name for source configure
+echo "${CLUSTER_NAME}" > /tmp/a4c/work/${SOURCE_NODE}/cluster_name
+
 instance_id=0
 es_list=""
 IFS=',';
