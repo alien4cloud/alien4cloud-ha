@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+mkdir -p /tmp/a4c/work/${SOURCE_NODE}/
+
 # export the cluster name for source configure
 echo "${CLUSTER_NAME}" > /tmp/a4c/work/${SOURCE_NODE}/cluster_name
 
@@ -19,5 +21,4 @@ do
   fi
   instance_id=$((instance_id+1))
 done
-mkdir -p /tmp/a4c/work/${SOURCE_NODE}/
 echo "${es_list}" > /tmp/a4c/work/${SOURCE_NODE}/es_list
