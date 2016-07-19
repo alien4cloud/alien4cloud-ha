@@ -1,16 +1,16 @@
-#tosca_definitions_version: alien_dsl_1_1_0
-tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
+tosca_definitions_version: alien_dsl_1_1_0
+#tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
 
 template_name: alien4cloud-ha
 template_version: 1.0.0-SNAPSHOT
 template_author: Fastconnect
 
 imports:
-#  - "tosca-normative-types:1.0.0-SNAPSHOT"
-#  - "jdk-type:1.0.0-SNAPSHOT"
-  - tosca-normative-types:*
-  - docker-provider-types:*
-  - jdk-type:*
+  - "tosca-normative-types:1.0.0-SNAPSHOT"
+  - "jdk-type:1.0.0-SNAPSHOT"
+#  - tosca-normative-types:*
+#  - docker-provider-types:*
+#  - jdk-type:*
 
 topology_template:
 
@@ -33,16 +33,16 @@ topology_template:
       value: { get_attribute: [ ConsulTemplate, service_url ] }
   node_templates:
     Network:
-#      type: tosca.nodes.Network
-      type: com.toscaruntime.docker.nodes.Network
-      properties:
-        network_name: alienNet
-        cidr: 10.67.79.0/24
+      type: tosca.nodes.Network
+#      type: com.toscaruntime.docker.nodes.Network
+#      properties:
+#        network_name: alienNet
+#        cidr: 10.67.79.0/24
     ConsulServerCompute:
-#      type: tosca.nodes.Compute
-      type: com.toscaruntime.docker.nodes.Container
-      properties:
-        image_id: toscaruntime/ubuntu-trusty
+      type: tosca.nodes.Compute
+#      type: com.toscaruntime.docker.nodes.Container
+#      properties:
+#        image_id: toscaruntime/ubuntu-trusty
       capabilities:
         scalable:
           properties:
@@ -50,10 +50,10 @@ topology_template:
             min_instances: 3
             default_instances: 3
     ElasticSearchCompute:
-#      type: tosca.nodes.Compute
-      type: com.toscaruntime.docker.nodes.Container
-      properties:
-        image_id: toscaruntime/ubuntu-trusty
+      type: tosca.nodes.Compute
+#      type: com.toscaruntime.docker.nodes.Container
+#      properties:
+#        image_id: toscaruntime/ubuntu-trusty
       capabilities:
         scalable:
           properties:
@@ -61,25 +61,25 @@ topology_template:
             min_instances: 2
             default_instances: 2
     ReverseProxyCompute:
-#      type: tosca.nodes.Compute
-      type: com.toscaruntime.docker.nodes.Container
-      properties:
-        image_id: toscaruntime/ubuntu-trusty
-        exposed_ports:
-          - port: 8080
-        port_mappings:
-          - from: 8080
-            to: 50001
+      type: tosca.nodes.Compute
+#      type: com.toscaruntime.docker.nodes.Container
+#      properties:
+#        image_id: toscaruntime/ubuntu-trusty
+#        exposed_ports:
+#          - port: 8080
+#        port_mappings:
+#          - from: 8080
+#            to: 50001
       requirements:
         - network:
             node: Network
             capability: tosca.capabilities.Connectivity
             relationship: tosca.relationships.Network
     AlienCompute:
-#      type: tosca.nodes.Compute
-      type: com.toscaruntime.docker.nodes.Container
-      properties:
-        image_id: toscaruntime/ubuntu-trusty
+      type: tosca.nodes.Compute
+#      type: com.toscaruntime.docker.nodes.Container
+#      properties:
+#        image_id: toscaruntime/ubuntu-trusty
       capabilities:
         scalable:
           properties:
@@ -107,6 +107,10 @@ topology_template:
         - host: ReverseProxyCompute
         - dependency:
             node: ReverseProxyConsulClient
+            capability: tosca.capabilities.Node
+            relationship: tosca.relationships.DependsOn
+        - dependency:
+            node: ReverseProxy
             capability: tosca.capabilities.Node
             relationship: tosca.relationships.DependsOn
     AlienJDK:
@@ -152,21 +156,6 @@ topology_template:
             relationship: alien.relationships.JavaSoftwareHostedOnJDK
 
 node_types:
-
-  alien4cloud.consul.nodes.DnsMasq:
-    derived_from: tosca.nodes.SoftwareComponent
-    description: >
-      DNS Masq
-    tags:
-      icon: /images/dnsmasq.png
-    interfaces:
-      Standard:
-        create:
-          implementation: scripts/dnsmasq/create.sh
-        configure:
-          implementation: scripts/dnsmasq/configure.sh
-        start:
-          implementation: scripts/dnsmasq/start.sh
 
   alien4cloud.consul.nodes.ConsulAgent:
     abstract: true
@@ -228,7 +217,6 @@ node_types:
         constraints:
           - equal: client
         default: client
-
     requirements:
       - consul_server: alien4cloud.consul.capabilities.ConsulServer
         type: alien4cloud.consul.relationships.JoinCluster
@@ -390,48 +378,6 @@ node_types:
           implementation: scripts/consul_template/start.sh
     artifacts:
       - config: config/consul_template
-        type: tosca.artifacts.File
-
-  alien.ha.types.HAProxy:
-    derived_from: tosca.nodes.SoftwareComponent
-    tags:
-      icon: /images/haproxy.png
-    properties:
-      conf_path:
-        type: string
-        required: true
-        default: "/etc/haproxy/haproxy.cfg"
-      listen_port:
-        type: integer
-        required: true
-        default: 8080
-      service_name:
-        type: string
-        required: true
-      domain_name:
-        type: string
-        required: true
-      service_port:
-        type: integer
-        required: true
-    attributes:
-      service_url: { concat: ["http://", get_attribute: [HOST, public_ip_address], ":", get_property: [SELF, listen_port]] }
-    interfaces:
-      Standard:
-        create:
-          implementation: scripts/haproxy/create.sh
-        configure:
-          inputs:
-            LISTEN_PORT: { get_property: [SELF, listen_port] }
-            CONF_PATH: { get_property: [SELF, conf_path] }
-            SERVICE_FQN: { concat: [ get_property: [SELF, service_name], ".", get_property: [SELF, domain_name]] }
-            SERVICE_PORT: { get_property: [SELF, service_port] }
-            SERVER_NAME: { get_attribute: [HOST, public_ip_address] }
-          implementation: scripts/haproxy/configure.sh
-        start:
-          implementation: scripts/haproxy/start.sh
-    artifacts:
-      - config: config/haproxy
         type: tosca.artifacts.File
 
 capability_types:

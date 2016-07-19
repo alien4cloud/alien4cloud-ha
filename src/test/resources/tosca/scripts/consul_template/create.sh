@@ -1,7 +1,8 @@
 #!/bin/bash -e
 
-mkdir -p /etc/consul_template/
-mkdir -p /var/lib/consul_template/
+sudo mkdir -p /etc/consul_template/
+sudo mkdir -p /var/lib/consul_template/
+sudo mkdir -p /var/log/consul-template/
 
 LOCK="/tmp/lockaptget"
 
@@ -26,4 +27,4 @@ rm -rf "${LOCK}"
 echo "released apt lock"
 
 wget --quiet -O /tmp/consul-template.zip "${APPLICATION_URL}"
-unzip /tmp/consul-template.zip -d /var/lib/consul_template/
+sudo unzip /tmp/consul-template.zip -d /var/lib/consul_template/
