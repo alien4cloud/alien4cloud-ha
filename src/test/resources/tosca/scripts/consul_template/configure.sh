@@ -1,4 +1,5 @@
 #!/bin/bash -e
+CONF_PATH="/etc/consul_template/nginx.conf.ctpl"
 sudo cp $config/nginx.conf.ctpl /etc/consul_template/
 sudo sed -i -e "s/%LISTEN_PORT%/${LISTEN_PORT}/g" $CONF_PATH
 sudo sed -i -e "s/%SERVICE_PORT%/${SERVICE_PORT}/g" $CONF_PATH
