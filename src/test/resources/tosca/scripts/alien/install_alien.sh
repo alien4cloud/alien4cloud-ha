@@ -8,26 +8,34 @@ sudo useradd alien4cloud
 # create log folder
 echo "Make log dir"
 if [ ! -d /var/log/alien4cloud ]; then
-  sudo mkdir /var/log/alien4cloud
+  sudo mkdir -p /var/log/alien4cloud
 fi
 
 echo "Make etc dir"
 if [ ! -d /etc/alien4cloud ]; then
-  sudo mkdir /etc/alien4cloud
+  sudo mkdir -p /etc/alien4cloud
 fi
 
 echo "Make tmp dir"
 if [ ! -d /tmp/alien4cloud ]; then
-	sudo mkdir /tmp/alien4cloud
+	sudo mkdir -p /tmp/alien4cloud
 fi
 
-# create application folder and copie files
-echo "Download webapp from ${APPLICATION_URL}"
-sudo wget --quiet -O /tmp/alien4cloud/alien.war "${APPLICATION_URL}"
+# create application folder
 echo "Make opt dir"
 if [ ! -d /opt/alien4cloud ]; then
-  sudo mkdir /opt/alien4cloud
+  sudo mkdir -p /opt/alien4cloud
 fi
+
+# create data folder
+echo "Make data dir $DATA_DIR"
+if [ ! -d $DATA_DIR ]; then
+  sudo mkdir -p $DATA_DIR
+fi
+
+# copy files
+echo "Download webapp from ${APPLICATION_URL}"
+sudo wget --quiet -O /tmp/alien4cloud/alien.war "${APPLICATION_URL}"
 sudo cp /tmp/alien4cloud/alien.war /opt/alien4cloud/alien.war
 
 # add config

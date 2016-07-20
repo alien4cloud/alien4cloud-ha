@@ -2,6 +2,11 @@
 
 A4C_CONFIG="/etc/alien4cloud/alien4cloud-config.yml"
 
+# replace the alien data dir
+echo "A4C data dir is ${DATA_DIR}"
+sudo sed -i -e "s@alien\: \(.*\)@alien\: ${DATA_DIR}@g" ${A4C_CONFIG}
+
+
 # get the ES address list
 es_list=$(</tmp/a4c/work/${NODE}/es_list)
 
