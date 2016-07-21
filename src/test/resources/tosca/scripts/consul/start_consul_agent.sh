@@ -1,50 +1,66 @@
 #!/bin/bash -e
 
+# eval the config file and replace the listed env vars
+# will not work if VAR_NAME or VAR_VALUE contains '@' (but will if they contains '/')
+eval_conf_file () {
+  SRC_FILE=$1
+  DEST_FILE=$2
+  VAR_LIST=$3
+
+  sudo cp $SRC_FILE $DEST_FILE
+  if [ ! -z "$VAR_LIST" ]; then
+    for VAR_NAME in $(echo ${VAR_LIST} | tr ',' ' ')
+    do
+      VAR_VALUE="${!VAR_NAME}"
+      sudo sed -i -e "s@%${VAR_NAME}%@${VAR_VALUE}@g" $DEST_FILE
+    done
+  fi
+  echo "Content of $DEST_FILE"
+  sudo cat $DEST_FILE
+}
+
 # evaluate and put the basic config
-eval "echo \"$(< $configs/basic_config.json)\"" | sudo more > /etc/consul/01_basic_config.json
-echo "Content of /etc/consul/01_basic_config.json"
-cat /etc/consul/01_basic_config.json
+eval_conf_file $configs/basic_config.json /etc/consul/01_basic_config.json "CONSUL_DATA_DIR,INSTANCE,CONSUL_BIND_ADDRESS"
 
 if [ "$CONSUL_AGENT_MODE" == "server" ]; then
-  	BOOTSTRAP_EXPECT=$(echo ${INSTANCES} | tr ',' ' ' | wc -w)
+  BOOTSTRAP_EXPECT=$(echo ${INSTANCES} | tr ',' ' ' | wc -w)
 	# evaluate and put the server config
-    eval "echo \"$(< ${configs}/server_config.json)\"" | sudo more > /etc/consul/02_server_config.json
-	echo "Content of /etc/consul/02_server_config.json"
-	cat /etc/consul/02_server_config.json
+  eval_conf_file $configs/server_config.json /etc/consul/02_server_config.json "BOOTSTRAP_EXPECT"
 fi
 
 if [ ! -z "$ENCRYPT_KEY" ]; then
-    eval "echo \"$(< ${configs}/encrypt_config.json)\"" | sudo more > /etc/consul/03_encrypt_config.json
-	echo "Content of /etc/consul/03_encrypt_config.json"
-	cat /etc/consul/03_encrypt_config.json
+  eval_conf_file $configs/encrypt_config.json /etc/consul/03_encrypt_config.json "ENCRYPT_KEY"
 fi
 
 if [ "$TLS_ENABLED" == "true" ]; then
+
+  TEMP_DIR=`mktemp -d`
+
 	# evaluate and put the secured config
-    eval "echo \"$(< ${configs}/${CONSUL_AGENT_MODE}_secured_config.json)\"" | sudo more > /etc/consul/04_${CONSUL_AGENT_MODE}_secured_config.json
-	echo "Content of /etc/consul/04_${CONSUL_AGENT_MODE}_secured_config.json"
-	cat /etc/consul/04_${CONSUL_AGENT_MODE}_secured_config.json
+  eval_conf_file $configs/${CONSUL_AGENT_MODE}_secured_config.json /etc/consul/04_${CONSUL_AGENT_MODE}_secured_config.json
 
 	SSL_REPO=/etc/consul/ssl
 	# Generate a keypair for the server or client, and sign it with the CA
 	sudo cp $ssl/ca.pem $SSL_REPO/ca.pem
 	sudo openssl genrsa -out $SSL_REPO/${CONSUL_AGENT_MODE}-key.pem 4096
-	sudo openssl req -subj "/CN=alien4cloud.org" -sha256 -new -key $SSL_REPO/${CONSUL_AGENT_MODE}-key.pem -out server.csr
-	sudo echo "[ ssl_client ]" > extfile.cnf
+	sudo openssl req -subj "/CN=alien4cloud.org" -sha256 -new -key $SSL_REPO/${CONSUL_AGENT_MODE}-key.pem -out $TEMP_DIR/server.csr
+	sudo echo "[ ssl_client ]" > $TEMP_DIR/extfile.cnf
 	# this cert will be used for the https api
 	# since we use it only in local between client and consul client we bind it to 127.0.0.1
-	sudo echo "subjectAltName = IP:127.0.0.1" >> extfile.cnf 
-	sudo echo "extendedKeyUsage=serverAuth,clientAuth" >> extfile.cnf
+	sudo echo "subjectAltName = IP:127.0.0.1" >> $TEMP_DIR/extfile.cnf
+	sudo echo "extendedKeyUsage=serverAuth,clientAuth" >> $TEMP_DIR/extfile.cnf
 	sudo openssl x509 -req -days 365 -sha256 \
-		-in server.csr -CA $SSL_REPO/ca.pem -CAkey $ssl/ca-key.pem \
+		-in $TEMP_DIR/server.csr -CA $SSL_REPO/ca.pem -CAkey $ssl/ca-key.pem \
 		-CAcreateserial -out $SSL_REPO/${CONSUL_AGENT_MODE}-cert.pem \
 		-passin pass:${CA_PASSPHRASE} \
-		-extfile extfile.cnf -extensions ssl_client
+		-extfile $TEMP_DIR/extfile.cnf -extensions ssl_client
+
+  sudo rm -rf $TEMP_DIR
 fi
 
 echo "Start consul agent in ${CONSUL_AGENT_MODE} mode, expecting ${BOOTSTRAP_EXPECT} servers, data dir at ${CONSUL_DATA_DIR}, bind on interface ${CONSUL_BIND_ADDRESS}"
 
-sudo nohup consul agent -config-dir /etc/consul > /var/log/consul/consul.log 2>&1 &
+nohup sudo bash -c 'consul agent -config-dir /etc/consul > /var/log/consul/consul.log 2>&1 &' >> /dev/null 2>&1 &
 
 sleep 10
 echo "Consul has following members until now"

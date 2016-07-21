@@ -1,12 +1,12 @@
 {
-  \"client_addr\": \"127.0.0.1\",
-  \"ports\": {
-    \"dns\" : -1,
-    \"http\" : -1,
-    \"https\": 8500
+  "client_addr": "127.0.0.1",
+  "ports": {
+    "dns" : -1,
+    "http" : -1,
+    "https": 8500
   },
-  \"key_file\": \"/etc/consul/ssl/client-key.pem\",
-  \"cert_file\": \"/etc/consul/ssl/client-cert.pem\",
-  \"ca_file\": \"/etc/consul/ssl/ca.pem\",  
-  \"verify_outgoing\": true  
+  "key_file": "/etc/consul/ssl/client-key.pem",
+  "cert_file": "/etc/consul/ssl/client-cert.pem",
+  "ca_file": "/etc/consul/ssl/ca.pem",
+  "verify_outgoing": true
 }

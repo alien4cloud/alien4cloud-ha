@@ -52,5 +52,3 @@ sudo unzip -o ${CONSUL_TMP_ZIP} -d /usr/local/bin
 echo "Unzipped consul package to /usr/local/bin"
 
 rm ${CONSUL_TMP_ZIP}
-
-
