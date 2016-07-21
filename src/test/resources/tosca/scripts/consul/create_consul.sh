@@ -1,5 +1,15 @@
 #!/bin/bash -e
 
+if [ ! -d "/etc/consul/ssl" ]; then
+  sudo mkdir -p /etc/consul/ssl
+fi
+if [ ! -d "/var/log/consul" ]; then
+  sudo mkdir -p /var/log/consul
+fi
+if [ ! -d "$CONSUL_DATA_DIR" ]; then
+  sudo mkdir -p ${CONSUL_DATA_DIR}
+fi
+
 CONSUL_TMP_ZIP=/tmp/consul.zip
 
 curl -Lo ${CONSUL_TMP_ZIP} -O ${CONSUL_DOWNLOAD_URL}
@@ -43,6 +53,4 @@ echo "Unzipped consul package to /usr/local/bin"
 
 rm ${CONSUL_TMP_ZIP}
 
-if [ ! -d "$CONSUL_DATA_DIR" ]; then
-  sudo mkdir ${CONSUL_DATA_DIR}
-fi
+

@@ -1,16 +1,16 @@
-tosca_definitions_version: alien_dsl_1_1_0
-#tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
+#tosca_definitions_version: alien_dsl_1_1_0
+tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
 
 template_name: alien4cloud-ha
 template_version: 1.0.0-SNAPSHOT
 template_author: Fastconnect
 
 imports:
-  - "tosca-normative-types:1.0.0-SNAPSHOT"
-  - "jdk-type:1.0.0-SNAPSHOT"
-#  - tosca-normative-types:*
-#  - docker-provider-types:*
-#  - jdk-type:*
+#  - "tosca-normative-types:1.0.0-SNAPSHOT"
+#  - "jdk-type:1.0.0-SNAPSHOT"
+  - tosca-normative-types:*
+  - docker-provider-types:*
+  - jdk-type:*
 
 topology_template:
 
@@ -18,35 +18,43 @@ topology_template:
     rproxy_port:
       type: integer
       required: true
-      default: 8080
+      default: 8080    
     alien_port:
       type: integer
       required: true
-      default: 8088
-    service_name:
-      type: string
-      required: true
-      default: a4c_primary
+      default: 8088      
     alien_data_dir:
       type: string
       required: true
-      default: "/opt/alien4cloud/data"
+      default: "/opt/alien4cloud/data"      
+    consul_tls_enabled:
+      type: boolean
+      required: false
+      default: true
+    ssl_ca_passphrase:
+      type: string
+      required: false
+      default: "dontChangeIt"
+    consul_gossip_encrypt_key:
+      type: string
+      required: false
+      default: "DicJJnc08ek/6pCxnQ/Rhg=="
   outputs:
     alien_url:
       description: The URL to access A4C
-      value: { get_attribute: [ ConsulTemplate, service_url ] }
+      value: { get_attribute: [ ConsulTemplate, service_url ] }      
   node_templates:
     Network:
       type: tosca.nodes.Network
-#      type: com.toscaruntime.docker.nodes.Network
-#      properties:
-#        network_name: alienNet
-#        cidr: 10.67.79.0/24
+      # type: com.toscaruntime.docker.nodes.Network
+      # properties:
+      #   network_name: alienNet
+      #   cidr: 10.67.79.0/24    
     ConsulServerCompute:
       type: tosca.nodes.Compute
-#      type: com.toscaruntime.docker.nodes.Container
-#      properties:
-#        image_id: toscaruntime/ubuntu-trusty
+      # type: com.toscaruntime.docker.nodes.Container
+      # properties:
+      #   image_id: toscaruntime/ubuntu-trusty
       capabilities:
         scalable:
           properties:
@@ -55,47 +63,60 @@ topology_template:
             default_instances: 3
     ElasticSearchCompute:
       type: tosca.nodes.Compute
-#      type: com.toscaruntime.docker.nodes.Container
-#      properties:
-#        image_id: toscaruntime/ubuntu-trusty
+      # type: com.toscaruntime.docker.nodes.Container
+      # properties:
+      #   image_id: toscaruntime/ubuntu-trusty
       capabilities:
         scalable:
           properties:
             max_instances: 2
             min_instances: 2
-            default_instances: 2
+            default_instances: 2            
     ReverseProxyCompute:
       type: tosca.nodes.Compute
-#      type: com.toscaruntime.docker.nodes.Container
-#      properties:
-#        image_id: toscaruntime/ubuntu-trusty
-#        exposed_ports:
-#          - port: 8080
-#        port_mappings:
-#          - from: 8080
-#            to: 50001
+      # type: com.toscaruntime.docker.nodes.Container
+      # properties:
+      #   image_id: toscaruntime/ubuntu-trusty
+      #   exposed_ports:
+      #     - port: 8080
+      #   port_mappings:
+      #     - from: 8080
+      #       to: 50001
       requirements:
         - network:
             node: Network
             capability: tosca.capabilities.Connectivity
-            relationship: tosca.relationships.Network
+            relationship: tosca.relationships.Network            
     AlienCompute:
       type: tosca.nodes.Compute
-#      type: com.toscaruntime.docker.nodes.Container
-#      properties:
-#        image_id: toscaruntime/ubuntu-trusty
+      # type: com.toscaruntime.docker.nodes.Container
+      # properties:
+      #   image_id: toscaruntime/ubuntu-trusty
       capabilities:
         scalable:
           properties:
             max_instances: 10
             min_instances: 2
-            default_instances: 2
+            default_instances: 2            
+    SambaServerCompute:
+      type: tosca.nodes.Compute
+      # type: com.toscaruntime.docker.nodes.Container
+      # properties:
+      #   image_id: toscaruntime/ubuntu-trusty
     ConsulServer:
       type: alien4cloud.consul.nodes.ConsulServer
+      properties:
+        tls_enabled: { get_input: consul_tls_enabled }
+        ca_passphrase: { get_input: ssl_ca_passphrase }
+        encrypt_key: { get_input: consul_gossip_encrypt_key }
       requirements:
         - host: ConsulServerCompute
     ReverseProxyConsulClient:
       type: alien4cloud.consul.nodes.ConsulClient
+      properties:
+        tls_enabled: { get_input: consul_tls_enabled }
+        ca_passphrase: { get_input: ssl_ca_passphrase }
+        encrypt_key: { get_input: consul_gossip_encrypt_key }      
       requirements:
         - host: ReverseProxyCompute
         - consul_server: ConsulServer
@@ -107,6 +128,8 @@ topology_template:
       type: alien.ha.types.ConsulTemplate4Nginx
       properties:
         listen_port: { get_input: rproxy_port }
+        tls_enabled: { get_input: consul_tls_enabled }
+        ca_passphrase: { get_input: ssl_ca_passphrase }        
       requirements:
         - host: ReverseProxyCompute
         - dependency:
@@ -123,6 +146,10 @@ topology_template:
         - host: AlienCompute
     AlienConsulClient:
       type: alien4cloud.consul.nodes.ConsulClient
+      properties:
+        tls_enabled: { get_input: consul_tls_enabled }
+        ca_passphrase: { get_input: ssl_ca_passphrase }
+        encrypt_key: { get_input: consul_gossip_encrypt_key }      
       requirements:
         - host: AlienCompute
         - consul_server: ConsulServer
@@ -133,8 +160,16 @@ topology_template:
         app_args: "--spring.profiles.active=security-demo,noApiDoc"
         alien_version: 1.3.0-SM2-SNAPSHOT
         listen_port: { get_input: alien_port }
-        dns_service_name: { get_input: service_name }
         data_dir: { get_input: alien_data_dir }
+      capabilities:
+        consul:
+          properties:
+            tls_enabled: { get_input: consul_tls_enabled }
+            ca_passphrase: { get_input: ssl_ca_passphrase }
+            keystore_pwd: "k3ySt0r3Pwd"
+            key_pwd: "k3yPwd" 
+            key_store_path: "/etc/alien4cloud/ssl/client-keystore.jks"
+            trust_store_path: "/etc/alien4cloud/ssl/truststore.jks"
       requirements:
         - java:
             node: AlienJDK
@@ -152,7 +187,6 @@ topology_template:
             node: SambaClient
             capability: tosca.capabilities.Node
             relationship: tosca.relationships.DependsOn
-
     ElasticSearchJDK:
       type: alien.nodes.JDK
       requirements:
@@ -166,8 +200,6 @@ topology_template:
             node: ElasticSearchJDK
             capability: alien.capabilities.JDK
             relationship: alien.relationships.JavaSoftwareHostedOnJDK
-    SambaServerCompute:
-      type: tosca.nodes.Compute
     SambaServer:
       type: alien4cloud.samba.nodes.SambaServer
       requirements:
@@ -182,7 +214,6 @@ topology_template:
             relationship: alien4cloud.samba.relationships.ConnectsToSambaServer
             properties:
               mount_point: { get_input: alien_data_dir }
-
 
 node_types:
 
@@ -202,6 +233,18 @@ node_types:
       data_dir:
         type: string
         default: /var/consul
+      tls_enabled:
+        description: define if the agent will be secured
+        type: boolean
+        required: true
+        default: false
+      ca_passphrase:
+        description: the provided CA cert passphrase
+        type: string
+        required: false
+      encrypt_key:
+        type: string
+        required: false
     attributes:
       consul_client_address: { get_operation_output: [ SELF, Standard, start, CONSUL_CLIENT_ADDRESS ] }
       consul_server_address: { get_operation_output: [ SELF, Standard, start, CONSUL_SERVER_ADDRESS ] }
@@ -230,11 +273,19 @@ node_types:
             CONSUL_AGENT_MODE: { get_property: [SELF, agent_mode] }
             CONSUL_DATA_DIR: { get_property: [SELF, data_dir] }
             CONSUL_BIND_ADDRESS: { get_attribute: [HOST, ip_address] }
+            TLS_ENABLED: { get_property: [SELF, tls_enabled] }
+            CA_PASSPHRASE: { get_property: [SELF, ca_passphrase] }
+            ENCRYPT_KEY: { get_property: [SELF, encrypt_key] }
           implementation: scripts/consul/start_consul_agent.sh
         start:
           inputs:
             CONSUL_ADDRESS: { get_attribute: [HOST, ip_address] }
           implementation: scripts/consul/join_consul_servers.sh
+    artifacts:
+      - configs: config/consul
+        type: tosca.artifacts.File
+      - ssl: ssl
+        type: tosca.artifacts.File
 
   alien4cloud.consul.nodes.ConsulClient:
     derived_from: alien4cloud.consul.nodes.ConsulAgent
@@ -261,7 +312,15 @@ node_types:
             CONSUL_AGENT_MODE: { get_property: [SELF, agent_mode] }
             CONSUL_DATA_DIR: { get_property: [SELF, data_dir] }
             CONSUL_BIND_ADDRESS: { get_attribute: [HOST, ip_address] }
+            TLS_ENABLED: { get_property: [SELF, tls_enabled] }
+            CA_PASSPHRASE: { get_property: [SELF, ca_passphrase] }
+            ENCRYPT_KEY: { get_property: [SELF, encrypt_key] }            
           implementation: scripts/consul/start_consul_agent.sh
+    artifacts:
+      - configs: config/consul
+        type: tosca.artifacts.File
+      - ssl: ssl
+        type: tosca.artifacts.File
 
   alien.nodes.ElasticSearch:
     derived_from: alien.nodes.JavaSoftware
@@ -328,11 +387,9 @@ node_types:
       alien_version:
         type: string
         required: true
-      dns_service_name:
-        type: string
-        required: true
       data_dir:
         type: string
+        required: true
         default: "/opt/alien4coud/data"
     capabilities:
       consul:
@@ -361,8 +418,11 @@ node_types:
           inputs:
             ALIEN_IP: { get_attribute: [HOST, ip_address] }
             ALIEN_PORT: { get_property: [SELF, listen_port] }
-            DNS_SERVICE_NAME: { get_property: [SELF, dns_service_name] }
             DATA_DIR: { get_property: [SELF, data_dir] }
+            TLS_ENABLED: { get_property: [SELF, consul, tls_enabled] }
+            KEY_STORE_PATH: { get_property: [SELF, consul, key_store_path] }
+            TRUST_STORE_PATH: { get_property: [SELF, consul, trust_store_path] }
+            KEYSTORE_PWD: { get_property: [SELF, consul, keystore_pwd] }
           implementation: scripts/alien/config_alien.sh
         start:
           inputs:
@@ -397,6 +457,15 @@ node_types:
         type: integer
         required: true
         default: 8080
+      tls_enabled:
+        description: define if the agent will be secured
+        type: boolean
+        required: true
+        default: false
+      ca_passphrase:
+        description: the provided CA cert passphrase
+        type: string
+        required: false
     attributes:
       service_url: { concat: ["http://", get_attribute: [HOST, public_ip_address], ":", get_property: [SELF, listen_port]] }
     interfaces:
@@ -409,11 +478,15 @@ node_types:
           inputs:
             LISTEN_PORT: { get_property: [SELF, listen_port] }
             SERVER_NAME: { get_attribute: [HOST, public_ip_address] }
+            TLS_ENABLED: { get_property: [SELF, tls_enabled] }
+            CA_PASSPHRASE: { get_property: [SELF, ca_passphrase] }            
           implementation: scripts/consul_template/configure.sh
         start:
           implementation: scripts/consul_template/start.sh
     artifacts:
       - config: config/consul_template
+        type: tosca.artifacts.File
+      - ssl: ssl
         type: tosca.artifacts.File
 
   alien4cloud.samba.nodes.SambaServer:
@@ -445,7 +518,6 @@ node_types:
       - config: config/samba/smb.conf
         type: tosca.artifacts.File
 
-
   alien4cloud.samba.nodes.SambaClient:
     derived_from: tosca.nodes.SoftwareComponent
     description: >
@@ -463,13 +535,40 @@ node_types:
       Standard:
         create: scripts/smbClient/install.sh
 
-
 capability_types:
 
   alien4cloud.consul.capabilities.ConsulAgent:
     derived_from: tosca.capabilities.Root
   alien4cloud.consul.capabilities.ConsulClient:
-    derived_from: tosca.capabilities.Root
+    derived_from: tosca.capabilities.Root   
+    description: >
+      The capability to connect to a consul agent using the consul API.   
+    properties:
+      tls_enabled:
+        type: boolean
+        description: indicates if the connection will be secured (HTTPS)
+        required: false
+        default: false
+      ca_passphrase:
+        type: string
+        description: the passphrase for the CA certificate
+        required: false
+      key_store_path:
+        type: string
+        description: the location of the key store
+        required: false
+      trust_store_path:
+        type: string
+        description: the location of the trust store
+        required: false        
+      keystore_pwd:
+        type: string
+        description: the password for the key store
+        required: false        
+      key_pwd:
+        type: string
+        description: the password for the key
+        required: false        
   alien4cloud.consul.capabilities.ConsulServer:
     derived_from: tosca.capabilities.Root
   alien.capabilities.ElasticSearch:
@@ -478,7 +577,7 @@ capability_types:
     derived_from: tosca.capabilities.Root
   alien4cloud.samba.capabilities.SambaServer:
     derived_from: tosca.capabilities.Root
-
+    
 relationship_types:
 
   alien4cloud.consul.relationships.JoinCluster:
@@ -494,6 +593,22 @@ relationship_types:
     derived_from: tosca.relationships.ConnectsTo
     valid_target_types: [alien4cloud.consul.capabilities.ConsulAgent]
     valid_source_types: [alien4cloud.consul.capabilities.ConsulClient]
+    interfaces:
+      Configure:
+        pre_configure_source:
+          inputs:
+            # the capabity name is required here, but in fact I can't guess it 
+            # TOSCA limitation ?
+            TLS_ENABLED: { get_property: [SOURCE, consul, tls_enabled] }
+            CA_PASSPHRASE: { get_property: [SOURCE, consul, ca_passphrase] }
+            KEY_STORE_PATH: { get_property: [SOURCE, consul, key_store_path] }
+            TRUST_STORE_PATH: { get_property: [SOURCE, consul, trust_store_path] }
+            KEYSTORE_PWD: { get_property: [SOURCE, consul, keystore_pwd] }
+            KEY_PWD: { get_property: [SOURCE, consul, key_pwd] }
+          implementation: scripts/ConnectToConsulAgent/pre_configure_source.sh  
+    artifacts:          
+      - ssl: ssl
+        type: tosca.artifacts.File            
   alien4cloud.relationships.ConnectToElasticSearch:
     derived_from: tosca.relationships.ConnectsTo
     valid_target_types: [alien.capabilities.ElasticSearch]
