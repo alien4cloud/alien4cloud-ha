@@ -1,4 +1,8 @@
 #!/bin/bash -e
+
+# check dependencies
+command -v apt-get >/dev/null 2>&1 || { echo "I require apt-get but it's not installed.  Aborting." >&2; exit 1; }
+
 LOCK="/tmp/lockaptget"
 
 while true; do

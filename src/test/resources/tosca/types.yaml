@@ -18,7 +18,7 @@ topology_template:
     rproxy_port:
       type: integer
       required: true
-      default: 8080
+      default: 80
     alien_port:
       type: integer
       required: true
@@ -42,7 +42,7 @@ topology_template:
   outputs:
     alien_url:
       description: The URL to access A4C
-      value: { get_attribute: [ ConsulTemplate, service_url ] }
+      value: { get_attribute: [ ReverseProxy, service_url ] }
   node_templates:
     Network:
       type: tosca.nodes.Network
@@ -122,6 +122,8 @@ topology_template:
         - consul_server: ConsulServer
     ReverseProxy:
       type: alien.ha.types.Nginx
+      properties:
+        listen_port: { get_input: rproxy_port }
       requirements:
         - host: ReverseProxyCompute
     ConsulTemplate:
@@ -437,12 +439,27 @@ node_types:
     derived_from: tosca.nodes.SoftwareComponent
     tags:
       icon: /images/nginx.png
+    properties:
+      listen_port:
+        type: integer
+        required: true
+        default: 80
+    attributes:
+      service_url: { concat: ["http://", get_attribute: [HOST, public_ip_address], ":", get_property: [SELF, listen_port]] }
     interfaces:
       Standard:
         create:
           implementation: scripts/nginx/create.sh
+        configure:
+          inputs:
+            LISTEN_PORT: { get_property: [SELF, listen_port] }
+            SERVER_NAME: { get_attribute: [HOST, public_ip_address] }
+          implementation: scripts/nginx/configure.sh
         start:
           implementation: scripts/nginx/start.sh
+    artifacts:
+      - config: config/nginx
+        type: tosca.artifacts.File
 
   alien.ha.types.ConsulTemplate4Nginx:
     derived_from: tosca.nodes.SoftwareComponent
@@ -466,8 +483,7 @@ node_types:
         description: the provided CA cert passphrase
         type: string
         required: false
-    attributes:
-      service_url: { concat: ["http://", get_attribute: [HOST, public_ip_address], ":", get_property: [SELF, listen_port]] }
+
     interfaces:
       Standard:
         create:

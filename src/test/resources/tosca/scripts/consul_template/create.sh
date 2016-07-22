@@ -4,6 +4,8 @@ sudo mkdir -p /etc/consul_template/ssl
 sudo mkdir -p /var/lib/consul_template/
 sudo mkdir -p /var/log/consul_template/
 
+# check dependencies
+command -v wget >/dev/null 2>&1 || { echo "I require wget but it's not installed.  Aborting." >&2; exit 1; }
 
 # Try to guess the Operating System distribution
 # The guessing algorithm is:
@@ -52,7 +54,7 @@ install_packages() {
 		while sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1 ; do
 		    echo "$NAME waiting for other software managers to finish..."
 		    sleep 2
-		done		
+		done
         sudo apt-get -y update > /dev/null 2>&1
         sudo apt-get -y install ${packages_to_install} > /dev/null 2>&1
         rm -rf "${LOCK}"

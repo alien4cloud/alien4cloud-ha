@@ -2,11 +2,8 @@
 
 CONF_PATH="/etc/consul_template"
 
-sudo cp -f $config/index.html /usr/share/nginx/html/
-sudo cp -f $config/nginx.default /etc/nginx/sites-enabled/default
-sudo sed -i -e "s/%LISTEN_PORT%/${LISTEN_PORT}/g" /etc/nginx/sites-enabled/default
-sudo sed -i -e "s/%SERVICE_PORT%/${SERVICE_PORT}/g" /etc/nginx/sites-enabled/default
-sudo sed -i -e "s/%SERVER_NAME%/${SERVER_NAME}/g" /etc/nginx/sites-enabled/default
+# check dependencies
+command -v openssl >/dev/null 2>&1 || { echo "I require openssl but it's not installed.  Aborting." >&2; exit 1; }
 
 # generate the nginx config template
 TEMPLATE_PATH="${CONF_PATH}/nginx.conf.ctpl"

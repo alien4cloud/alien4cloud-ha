@@ -64,6 +64,11 @@ install_packages() {
 # install unzip if not found
 command -v unzip >/dev/null 2>&1 || { install_packages "unzip"; }
 
+# check dependencies
+command -v unzip >/dev/null 2>&1 || { echo "I require unzip but it's not installed.  Aborting." >&2; exit 1; }
+command -v wget >/dev/null 2>&1 || { echo "I require wget but it's not installed.  Aborting." >&2; exit 1; }
+command -v jar >/dev/null 2>&1 || { echo "I require jar but it's not installed.  Aborting." >&2; exit 1; }
+
 # create user
 sudo useradd alien4cloud
 

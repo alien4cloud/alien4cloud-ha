@@ -1,5 +1,9 @@
 #!/bin/bash -e
 
+# check dependencies
+command -v wget >/dev/null 2>&1 || { echo "I require wget but it's not installed.  Aborting." >&2; exit 1; }
+command -v dpkg >/dev/null 2>&1 || { echo "I require dpkg but it's not installed.  Aborting." >&2; exit 1; }
+
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 # OS configuration
