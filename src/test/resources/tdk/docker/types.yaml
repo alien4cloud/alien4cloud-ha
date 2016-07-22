@@ -1,0 +1,67 @@
+tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
+
+template_name: alien4cloud-ha-docker
+template_version: 1.0.0-SNAPSHOT
+template_author: Fastconnect
+
+imports:
+  - jdk-type:*
+  - alien4cloud-ha:*
+
+topology_template:
+
+  node_templates:
+    Network:
+      type: com.toscaruntime.docker.nodes.Network
+      properties:
+        network_name: alienNet
+        cidr: 10.67.79.0/24    
+    ConsulServerCompute:
+      type: com.toscaruntime.docker.nodes.Container
+      properties:
+        image_id: toscaruntime/ubuntu-trusty
+      capabilities:
+        scalable:
+          properties:
+            max_instances: 3
+            min_instances: 3
+            default_instances: 3
+    ElasticSearchCompute:
+      type: com.toscaruntime.docker.nodes.Container
+      properties:
+        image_id: toscaruntime/ubuntu-trusty
+      capabilities:
+        scalable:
+          properties:
+            max_instances: 2
+            min_instances: 2
+            default_instances: 2            
+    ReverseProxyCompute:
+      type: com.toscaruntime.docker.nodes.Container
+      properties:
+        image_id: toscaruntime/ubuntu-trusty
+        exposed_ports:
+          - port: 8080
+        port_mappings:
+          - from: 8080
+            to: 50001
+      requirements:
+        - network:
+            node: Network
+            capability: tosca.capabilities.Connectivity
+            relationship: tosca.relationships.Network            
+    AlienCompute:
+      type: com.toscaruntime.docker.nodes.Container
+      properties:
+        image_id: toscaruntime/ubuntu-trusty
+      capabilities:
+        scalable:
+          properties:
+            max_instances: 10
+            min_instances: 2
+            default_instances: 2            
+    SambaServerCompute:
+      type: com.toscaruntime.docker.nodes.Container
+      properties:
+        image_id: toscaruntime/ubuntu-trusty
+

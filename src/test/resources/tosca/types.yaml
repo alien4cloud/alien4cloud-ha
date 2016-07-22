@@ -1,60 +1,59 @@
-tosca_definitions_version: alien_dsl_1_1_0
-#tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
+#tosca_definitions_version: alien_dsl_1_1_0
+tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
 
 template_name: alien4cloud-ha
 template_version: 1.0.0-SNAPSHOT
 template_author: Fastconnect
 
 imports:
-  - "tosca-normative-types:1.0.0-SNAPSHOT"
-  - "jdk-type:1.0.0-SNAPSHOT"
-#  - tosca-normative-types:*
+#  - "tosca-normative-types:1.0.0-SNAPSHOT"
+#  - "jdk-type:1.0.0-SNAPSHOT"
+  - tosca-normative-types:*
 #  - docker-provider-types:*
-#  - jdk-type:*
+  - jdk-type:*
 
 topology_template:
 
   inputs:
     rproxy_port:
+      description: The reverse proxy will listen on this port.
       type: integer
       required: true
       default: 80
     alien_port:
+      description: The A4C webapps will listen on this port.
       type: integer
       required: true
       default: 8088
     alien_data_dir:
+      description: The location where A4C will store data on local FS.
       type: string
       required: true
       default: "/opt/alien4cloud/data"
     consul_tls_enabled:
+      description: If true, TLS will be enabled on consul agents (HTTPS).
       type: boolean
       required: false
       default: true
     ssl_ca_passphrase:
+      description: The passphrase for the CA certificate.
       type: string
       required: false
       default: "dontChangeIt"
     consul_gossip_encrypt_key:
+      description: The key to encrypt gossip exchanges into consul cluster.
       type: string
       required: false
       default: "DicJJnc08ek/6pCxnQ/Rhg=="
   outputs:
     alien_url:
-      description: The URL to access A4C
+      description: The URL to access A4C.
       value: { get_attribute: [ ReverseProxy, service_url ] }
   node_templates:
     Network:
       type: tosca.nodes.Network
-      # type: com.toscaruntime.docker.nodes.Network
-      # properties:
-      #   network_name: alienNet
-      #   cidr: 10.67.79.0/24
     ConsulServerCompute:
       type: tosca.nodes.Compute
-      # type: com.toscaruntime.docker.nodes.Container
-      # properties:
-      #   image_id: toscaruntime/ubuntu-trusty
       capabilities:
         scalable:
           properties:
@@ -63,9 +62,6 @@ topology_template:
             default_instances: 3
     ElasticSearchCompute:
       type: tosca.nodes.Compute
-      # type: com.toscaruntime.docker.nodes.Container
-      # properties:
-      #   image_id: toscaruntime/ubuntu-trusty
       capabilities:
         scalable:
           properties:
@@ -74,14 +70,6 @@ topology_template:
             default_instances: 2
     ReverseProxyCompute:
       type: tosca.nodes.Compute
-      # type: com.toscaruntime.docker.nodes.Container
-      # properties:
-      #   image_id: toscaruntime/ubuntu-trusty
-      #   exposed_ports:
-      #     - port: 8080
-      #   port_mappings:
-      #     - from: 8080
-      #       to: 50001
       requirements:
         - network:
             node: Network
@@ -89,9 +77,6 @@ topology_template:
             relationship: tosca.relationships.Network
     AlienCompute:
       type: tosca.nodes.Compute
-      # type: com.toscaruntime.docker.nodes.Container
-      # properties:
-      #   image_id: toscaruntime/ubuntu-trusty
       capabilities:
         scalable:
           properties:
@@ -100,9 +85,6 @@ topology_template:
             default_instances: 2
     SambaServerCompute:
       type: tosca.nodes.Compute
-      # type: com.toscaruntime.docker.nodes.Container
-      # properties:
-      #   image_id: toscaruntime/ubuntu-trusty
     ConsulServer:
       type: alien4cloud.consul.nodes.ConsulServer
       properties:
@@ -223,28 +205,33 @@ node_types:
     abstract: true
     derived_from: tosca.nodes.SoftwareComponent
     description: >
-      Consul discovery service installation
+      Base Consul discovery service installation.
     tags:
       icon: /images/consul.png
     capabilities:
       consul_agent: alien4cloud.consul.capabilities.ConsulAgent
     properties:
       download_url:
+        description: The URL to download the consul archive.
         type: string
+        required: true
         default: https://releases.hashicorp.com/consul/0.6.4/consul_0.6.4_linux_amd64.zip
       data_dir:
+        description: The location on the FS where consul will store data.
         type: string
+        required: true
         default: /var/consul
       tls_enabled:
-        description: define if the agent will be secured
+        description: Defines if the communication with the consul agent will be secured (HTTPS).
         type: boolean
         required: true
         default: false
       ca_passphrase:
-        description: the provided CA cert passphrase
+        description: The provided CA certificate passphrase.
         type: string
         required: false
       encrypt_key:
+        description: The key to encrypt gossip exchanges into consul cluster.
         type: string
         required: false
     attributes:
@@ -254,12 +241,14 @@ node_types:
   alien4cloud.consul.nodes.ConsulServer:
     derived_from: alien4cloud.consul.nodes.ConsulAgent
     description: >
-      Consul discovery service installation (server node)
+      Consul discovery service installation (server node).
     properties:
       agent_mode:
+        description: Indicate the consul agent mode (actually server).
         type: string
         constraints:
           - equal: server
+        required: true
         default: server
     capabilities:
       consul_server: alien4cloud.consul.capabilities.ConsulServer
@@ -292,9 +281,10 @@ node_types:
   alien4cloud.consul.nodes.ConsulClient:
     derived_from: alien4cloud.consul.nodes.ConsulAgent
     description: >
-      Consul discovery service installation (client node)
+      Consul discovery service installation (client node).
     properties:
       agent_mode:
+        description: Indicate the consul agent mode (actually client).
         type: string
         constraints:
           - equal: client
@@ -327,7 +317,7 @@ node_types:
   alien.nodes.ElasticSearch:
     derived_from: alien.nodes.JavaSoftware
     description: >
-      Installation of ElasticSearch
+      Installation of replicated ElasticSearch (if this node is scaled, will be replicated). 
     tags:
       icon: images/elasticsearch.png
     properties:
@@ -340,6 +330,7 @@ node_types:
         required: true
         default: 9300
       cluster_name:
+        description: The name of the ElasticSearch cluster.
         type: string
         required: true
         default: "escluster"
@@ -372,6 +363,7 @@ node_types:
       icon: /images/alien4cloud-logo.png
     properties:
       alien_url:
+        description: The URL where to download A4C archive.
         type: string
         required: true
         default: "https://fastconnect.org/maven/service/local/repositories/opensource/content/alien4cloud/alien4cloud-ui/1.1.0-SM8/alien4cloud-ui-1.1.0-SM8-standalone.war"
@@ -379,17 +371,21 @@ node_types:
         type: string
         default: "/"
       app_args:
+        description: These args will be used as java program arguments.
         type: string
         required: false
         default: ""
       listen_port:
+        description: The port on which A4C will listen.
         type: integer
         required: true
         default: 8080
       alien_version:
+        description: The version of A4C (important in create stage).
         type: string
         required: true
       data_dir:
+        description: The location on the file system where A4C will store data (plugins, images ...).
         type: string
         required: true
         default: "/opt/alien4coud/data"
@@ -437,10 +433,13 @@ node_types:
 
   alien.ha.types.Nginx:
     derived_from: tosca.nodes.SoftwareComponent
+    description: >
+      NGINX web server and reverse proxy installation.
     tags:
       icon: /images/nginx.png
     properties:
       listen_port:
+        description: The port onto the http server will be listening.
         type: integer
         required: true
         default: 80
@@ -463,6 +462,10 @@ node_types:
 
   alien.ha.types.ConsulTemplate4Nginx:
     derived_from: tosca.nodes.SoftwareComponent
+    description: |
+      Consul-Template is a smart tool that can listen for consul changes, 
+      use templates to update config files on changes, and call a command. It can be
+      used for example to update reverse proxy config and reload it.
     tags:
       icon: /images/consul_template.png
     properties:
@@ -555,6 +558,8 @@ capability_types:
 
   alien4cloud.consul.capabilities.ConsulAgent:
     derived_from: tosca.capabilities.Root
+    description: >
+      A consul agent (server or client) exposes this capability.
   alien4cloud.consul.capabilities.ConsulClient:
     derived_from: tosca.capabilities.Root
     description: >
@@ -587,10 +592,16 @@ capability_types:
         required: false
   alien4cloud.consul.capabilities.ConsulServer:
     derived_from: tosca.capabilities.Root
+    description: >
+      Exposed by a consul server agent.
   alien.capabilities.ElasticSearch:
     derived_from: tosca.capabilities.Root
+    description: >
+      Exposed by a ElasticSearch node.
   alien.capabilities.ElasticSearchClient:
     derived_from: tosca.capabilities.Root
+    description: >
+      The capability to connect to a ElasticSearch cluster.
   alien4cloud.samba.capabilities.SambaServer:
     derived_from: tosca.capabilities.Root
 
@@ -598,7 +609,10 @@ relationship_types:
 
   alien4cloud.consul.relationships.JoinCluster:
     derived_from: tosca.relationships.ConnectsTo
+    description: >
+      The relationship between a consul client agent and a consul server agent.
     valid_target_types: [alien4cloud.consul.capabilities.ConsulServer]
+    valid_source_types: [alien4cloud.consul.capabilities.ConsulClient]
     interfaces:
       Configure:
         add_target:
