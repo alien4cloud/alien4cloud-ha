@@ -149,6 +149,7 @@ topology_template:
         listen_port: { get_input: alien_port }
         data_dir: { get_input: alien_data_dir }
         ssl_enabled: { get_input: alien_ssl }
+        ca_passphrase: { get_input: ssl_ca_passphrase }
       capabilities:
         consul:
           properties:
@@ -397,6 +398,10 @@ node_types:
         description: If true enable HTTPS connector for alien.
         type: boolean
         default: false
+      ca_passphrase:
+        description: the provided CA cert passphrase
+        type: string
+        required: false
     capabilities:
       consul:
         type: alien4cloud.consul.capabilities.ConsulClient
@@ -430,6 +435,7 @@ node_types:
             TRUST_STORE_PATH: { get_property: [SELF, consul, trust_store_path] }
             KEYSTORE_PWD: { get_property: [SELF, consul, keystore_pwd] }
             SSL_ENABLED: { get_property: [SELF, ssl_enabled] }
+            CA_PASSPHRASE: { get_property: [SELF, ca_passphrase] }
           implementation: scripts/alien/config_alien.sh
         start:
           inputs:

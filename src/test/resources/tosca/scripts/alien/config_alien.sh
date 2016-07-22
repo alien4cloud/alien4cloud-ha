@@ -2,6 +2,8 @@
 
 A4C_CONFIG="/etc/alien4cloud/alien4cloud-config.yml"
 
+CONNECTED_TO_CONSUL=$(</tmp/a4c/work/${NODE}/connectedToConsulAgent)
+
 # replace the alien data dir
 echo "A4C data dir is ${DATA_DIR}"
 sudo sed -i -e "s@alien\: \(.*\)@alien\: ${DATA_DIR}@g" ${A4C_CONFIG}
@@ -43,9 +45,9 @@ if [ "$SSL_ENABLED" == "true" ]; then
 
   sudo rm -rf $TEMP_DIR
 
-  sudo sed -i -e "s/#  key-store\: \(.*\)/  key-store\: $AC4_SSL_DIR/server-keystore.jks/g" ${A4C_CONFIG}
-  sudo sed -i -e "s/#  key-store-password\: \(.*\)/  key-store-password\: $KEYSTORE_PWD/g" ${A4C_CONFIG}
-  sudo sed -i -e "s/#  key-password\: \(.*\)/  key-password\: $KEY_PWD/g" ${A4C_CONFIG}
+  sudo sed -i -e "s@#  key-store\: \(.*\)@  key-store\: \"$AC4_SSL_DIR/server-keystore.jks\"@g" ${A4C_CONFIG}
+  sudo sed -i -e "s/#  key-store-password\: \(.*\)/  key-store-password\: \"$KEYSTORE_PWD\"/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/#  key-password\: \(.*\)/  key-password\: \"$KEY_PWD\"/g" ${A4C_CONFIG}
 fi
 
 # get the ES address list
@@ -69,12 +71,12 @@ echo "The ElasticSearch cluster is: ${cluster_name}"
 sudo sed -i -e "s/clusterName\: \(.*\)/clusterName\: $cluster_name/g" ${A4C_CONFIG}
 sudo echo "cluster.name: ${cluster_name}" > /etc/alien4cloud/elasticsearch.yml
 
-# enable HA if more than one A4C instance found
-# FIXME: enabling the HA should not be related to the number of A4C instances ...
-# ... but instead to the fact that we are actually connected to consul
-number_of_instances=$(echo ${INSTANCES} | tr ',' ' ' | wc -w)
-if [ "${number_of_instances}" -gt "1" ]; then
-  echo "${number_of_instances} will run, activate HA"
+## FIXME: enabling the HA should not be related to the number of A4C instances ...
+## ... but instead to the fact that we are actually connected to consul
+#number_of_instances=$(echo ${INSTANCES} | tr ',' ' ' | wc -w)
+# enable HA if A4C is connected to a Consul agent
+if [ "${CONNECTED_TO_CONSUL}" == "true" ]; then
+  echo "A4C is connected to Consul, activate HA"
   sudo sed -i -e "s/ha_enabled\: \(.*\)/ha_enabled\: true/g" ${A4C_CONFIG}
   if [ "$TLS_ENABLED" == "true" ]; then
       sudo sed -i -e "s/consul_tls_enabled\: \(.*\)/consul_tls_enabled\: true/g" ${A4C_CONFIG}
@@ -82,6 +84,7 @@ if [ "${number_of_instances}" -gt "1" ]; then
       sudo sed -i -e "s@trustStorePath\: \(.*\)@trustStorePath\: $TRUST_STORE_PATH@g" ${A4C_CONFIG}
       sudo sed -i -e "s/keyStoresPwd\: \(.*\)/keyStoresPwd\: $KEYSTORE_PWD/g" ${A4C_CONFIG}
   else
+      echo "A4C is not connected to Consul, desactivate HA"
       sudo sed -i -e "s/consul_tls_enabled\: \(.*\)/consul_tls_enabled\: false/g" ${A4C_CONFIG}
   fi
 else

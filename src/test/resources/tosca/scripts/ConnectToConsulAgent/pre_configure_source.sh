@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# just a flag to know that we are connected to a consul agent
+mkdir -p /tmp/a4c/work/${SOURCE_NODE}/
+echo "true" > /tmp/a4c/work/${SOURCE_NODE}/connectedToConsulAgent
+
 if [ "$TLS_ENABLED" != "true" ]; then
 	exit 0
 fi
