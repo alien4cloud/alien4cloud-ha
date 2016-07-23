@@ -1,0 +1,1148 @@
+tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
+description: Alien4Cloud generated service template
+template_name: alien-ha
+template_version: 0.1.0-SNAPSHOT
+template_author: admin
+
+imports:
+  - tosca-normative-types:1.0.0-SNAPSHOT
+  - jdk-type:1.0.0-SNAPSHOT
+  - alien4cloud-ha:1.0.0-SNAPSHOT
+
+topology_template:
+  inputs:
+    rproxy_port:
+      type: integer
+      required: true
+      default: $propertyUtils.renderScalar($inputEntry.value.default)
+      description: The reverse proxy will listen on this port.
+    alien_port:
+      type: integer
+      required: true
+      default: $propertyUtils.renderScalar($inputEntry.value.default)
+      description: The A4C webapps will listen on this port.
+    alien_protocol:
+      type: string
+      required: true
+      default: $propertyUtils.renderScalar($inputEntry.value.default)
+      constraints:
+        - valid_values: [http, https]
+    alien_data_dir:
+      type: string
+      required: true
+      default: $propertyUtils.renderScalar($inputEntry.value.default)
+      description: The location where A4C will store data on local FS.
+    consul_tls_enabled:
+      type: boolean
+      required: false
+      default: $propertyUtils.renderScalar($inputEntry.value.default)
+      description: If true, TLS will be enabled on consul agents (HTTPS).
+    ssl_ca_passphrase:
+      type: string
+      required: false
+      default: $propertyUtils.renderScalar($inputEntry.value.default)
+      description: The passphrase for the CA certificate.
+    consul_gossip_encrypt_key:
+      type: string
+      required: false
+      default: $propertyUtils.renderScalar($inputEntry.value.default)
+      description: The key to encrypt gossip exchanges into consul cluster.
+  node_templates:
+    Alien:
+      type: alien.nodes.Alien
+      properties:
+        alien_url: https://fastconnect.org/owncloud/public.php?service=files&t=59c0ae3b1a41c50677e8804fb0254f1f&download
+        context_root: /
+        app_args: --spring.profiles.active=security-demo,noApiDoc
+        listen_port: { get_input: alien_port }
+        alien_version: 1.3.0-SM2-SNAPSHOT
+        data_dir: { get_input: alien_data_dir }
+        server_protocol: { get_input: alien_protocol }
+        ca_passphrase: { get_input: ssl_ca_passphrase }
+      requirements:
+        - elasticsearch:
+            node: ElasticSearch
+            capability: alien.capabilities.ElasticSearch
+            relationship: alien4cloud.relationships.ConnectToElasticSearch
+        - dependency:
+            node: SambaClient
+            capability: tosca.capabilities.Node
+            relationship: tosca.relationships.DependsOn
+        - consul:
+            node: ConsulClient
+            capability: alien4cloud.consul.capabilities.ConsulAgent
+            relationship: alien4cloud.consul.relationships.ConnectToConsulAgent
+        - java:
+            node: AlienJDK
+            capability: alien.capabilities.JDK
+            relationship: alien.relationships.JavaSoftwareHostedOnJDK
+      capabilities:
+        consul:
+          properties:
+            ca_passphrase: { get_input: ssl_ca_passphrase }
+            tls_enabled: { get_input: consul_tls_enabled }
+            key_pwd: k3yPwd
+            key_store_path: /etc/alien4cloud/ssl/client-keystore.jks
+            trust_store_path: /etc/alien4cloud/ssl/truststore.jks
+            keystore_pwd: k3ySt0r3Pwd
+    ConsulClient:
+      type: alien4cloud.consul.nodes.ConsulClient
+      properties:
+        tls_enabled: false
+        download_url: https://releases.hashicorp.com/consul/0.6.4/consul_0.6.4_linux_amd64.zip
+        agent_mode: client
+        data_dir: /var/consul
+      requirements:
+        - consul_server:
+            node: ConsulServer
+            capability: alien4cloud.consul.capabilities.ConsulServer
+            relationship: alien4cloud.consul.relationships.JoinCluster
+        - host:
+            node: BackendCompute
+            capability: tosca.capabilities.Container
+            relationship: tosca.relationships.HostedOn
+    AlienCompute:
+      type: tosca.nodes.Compute
+      capabilities:
+        scalable:
+          properties:
+            min_instances: 2
+            max_instances: 10
+            default_instances: 2
+        endpoint:
+          properties:
+            protocol: tcp
+            initiator: source
+            network_name: PRIVATE
+            secure: true
+    FacadeCompute:
+      type: tosca.nodes.Compute
+      capabilities:
+        scalable:
+          properties:
+            min_instances: 1
+            max_instances: 1
+            default_instances: 1
+        endpoint:
+          properties:
+            protocol: tcp
+            initiator: source
+            network_name: PRIVATE
+            secure: true
+    ReverseProxy:
+      type: alien.ha.types.Nginx
+      properties:
+        listen_port: { get_input: rproxy_port }
+        target_protocol: { get_input: alien_protocol }
+        ca_passphrase: { get_input: ssl_ca_passphrase }
+      requirements:
+        - host:
+            node: FacadeCompute
+            capability: tosca.capabilities.Container
+            relationship: tosca.relationships.HostedOn
+    SambaClient:
+      type: alien4cloud.samba.nodes.SambaClient
+      properties:
+        mount_point: /var/alien4cloud
+      requirements:
+        - host:
+            node: AlienCompute
+            capability: tosca.capabilities.Container
+            relationship: tosca.relationships.HostedOn
+        - smb_server:
+            node: SambaServer
+            capability: alien4cloud.samba.capabilities.SambaServer
+            relationship: alien4cloud.samba.relationships.ConnectsToSambaServer
+            properties:
+              mount_point: { get_input: alien_data_dir }
+    ConsulServer:
+      type: alien4cloud.consul.nodes.ConsulServer
+      properties:
+        tls_enabled: false
+        download_url: https://releases.hashicorp.com/consul/0.6.4/consul_0.6.4_linux_amd64.zip
+        agent_mode: server
+        data_dir: /var/consul
+      requirements:
+        - host:
+            node: BackendCompute
+            capability: tosca.capabilities.Container
+            relationship: tosca.relationships.HostedOn
+    SambaServer:
+      type: alien4cloud.samba.nodes.SambaServer
+      properties:
+        share_name: ALIEN4CLOUD
+        share_path: /srv/samba/alien4cloud
+      requirements:
+        - host:
+            node: FacadeCompute
+            capability: tosca.capabilities.Container
+            relationship: tosca.relationships.HostedOn
+    ConsulTemplate:
+      type: alien.ha.types.ConsulTemplate4Nginx
+      properties:
+        download_url: https://releases.hashicorp.com/consul-template/0.15.0/consul-template_0.15.0_linux_amd64.zip
+        listen_port: { get_input: rproxy_port }
+        tls_enabled: { get_input: consul_tls_enabled }
+        ca_passphrase: { get_input: ssl_ca_passphrase }
+        target_protocol: { get_input: alien_protocol }
+      requirements:
+        - host:
+            node: FacadeCompute
+            capability: tosca.capabilities.Container
+            relationship: tosca.relationships.HostedOn
+        - dependency:
+            node: ReverseProxy
+            capability: tosca.capabilities.Node
+            relationship: tosca.relationships.DependsOn
+    ElasticSearch:
+      type: alien.nodes.ElasticSearch
+      properties:
+        elasticsearch_url: https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.7.0.deb
+        listen_port: 9300
+        cluster_name: a4c_cluster
+      requirements:
+        - java:
+            node: ElasticSearchJDK
+            capability: alien.capabilities.JDK
+            relationship: alien.relationships.JavaSoftwareHostedOnJDK
+    AlienJDK:
+      type: alien.nodes.JDK
+      properties:
+        java_home: /opt/java
+        java_url: http://download.oracle.com/otn-pub/java/jdk/7u75-b13/jdk-7u75-linux-x64.tar.gz
+      requirements:
+        - host:
+            node: AlienCompute
+            capability: tosca.capabilities.Container
+            relationship: tosca.relationships.HostedOn
+    Network:
+      type: tosca.nodes.Network
+      properties:
+        ip_version: 4
+    BackendCompute:
+      type: tosca.nodes.Compute
+      capabilities:
+        scalable:
+          properties:
+            min_instances: 3
+            max_instances: 3
+            default_instances: 3
+        endpoint:
+          properties:
+            protocol: tcp
+            initiator: source
+            network_name: PRIVATE
+            secure: true
+    ElasticSearchJDK:
+      type: alien.nodes.JDK
+      properties:
+        java_home: /opt/java
+        java_url: http://download.oracle.com/otn-pub/java/jdk/7u75-b13/jdk-7u75-linux-x64.tar.gz
+      requirements:
+        - host:
+            node: BackendCompute
+            capability: tosca.capabilities.Container
+            relationship: tosca.relationships.HostedOn
+  outputs:
+    ReverseProxy_service_url:
+      value: { get_attribute: [ ReverseProxy, service_url ] }
+  workflows:
+    install:
+      steps:
+        ConsulTemplate_starting:
+          node: ConsulTemplate
+          activity:
+            set_state: starting
+          on-success:
+            - start_ConsulTemplate
+        create_SambaClient:
+          node: SambaClient
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - SambaClient_created
+        start_ElasticSearchJDK:
+          node: ElasticSearchJDK
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - ElasticSearchJDK_started
+        Alien_created:
+          node: Alien
+          activity:
+            set_state: created
+          on-success:
+            - SambaClient_configuring
+            - ConsulClient_configuring
+            - ElasticSearch_configuring
+            - Alien_configuring
+        ElasticSearch_initial:
+          node: ElasticSearch
+          activity:
+            set_state: initial
+          on-success:
+            - ElasticSearch_creating
+        Alien_configuring:
+          node: Alien
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_Alien
+        SambaServer_initial:
+          node: SambaServer
+          activity:
+            set_state: initial
+          on-success:
+            - SambaServer_creating
+        AlienJDK_started:
+          node: AlienJDK
+          activity:
+            set_state: started
+          on-success:
+            - Alien_initial
+        SambaServer_creating:
+          node: SambaServer
+          activity:
+            set_state: creating
+          on-success:
+            - create_SambaServer
+        configure_ElasticSearch:
+          node: ElasticSearch
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - ElasticSearch_configured
+        Alien_started:
+          node: Alien
+          activity:
+            set_state: started
+        ElasticSearch_configured:
+          node: ElasticSearch
+          activity:
+            set_state: configured
+          on-success:
+            - ElasticSearch_starting
+        ElasticSearch_configuring:
+          node: ElasticSearch
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_ElasticSearch
+        ConsulTemplate_initial:
+          node: ConsulTemplate
+          activity:
+            set_state: initial
+          on-success:
+            - ConsulTemplate_creating
+        SambaClient_creating:
+          node: SambaClient
+          activity:
+            set_state: creating
+          on-success:
+            - create_SambaClient
+        ConsulTemplate_created:
+          node: ConsulTemplate
+          activity:
+            set_state: created
+          on-success:
+            - ConsulTemplate_configuring
+            - ReverseProxy_configuring
+        ElasticSearchJDK_starting:
+          node: ElasticSearchJDK
+          activity:
+            set_state: starting
+          on-success:
+            - start_ElasticSearchJDK
+        ReverseProxy_configuring:
+          node: ReverseProxy
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_ReverseProxy
+        ReverseProxy_created:
+          node: ReverseProxy
+          activity:
+            set_state: created
+          on-success:
+            - ReverseProxy_configuring
+        AlienCompute_install:
+          node: AlienCompute
+          activity:
+            delegate: install
+          on-success:
+            - ConsulTemplate_configuring
+            - SambaClient_initial
+            - Alien_configuring
+            - AlienJDK_initial
+        start_SambaServer:
+          node: SambaServer
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - SambaServer_started
+        create_ElasticSearchJDK:
+          node: ElasticSearchJDK
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - ElasticSearchJDK_created
+        configure_ReverseProxy:
+          node: ReverseProxy
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - ReverseProxy_configured
+        ReverseProxy_configured:
+          node: ReverseProxy
+          activity:
+            set_state: configured
+          on-success:
+            - ReverseProxy_starting
+        ConsulTemplate_configured:
+          node: ConsulTemplate
+          activity:
+            set_state: configured
+          on-success:
+            - ConsulTemplate_starting
+        ElasticSearch_started:
+          node: ElasticSearch
+          activity:
+            set_state: started
+          on-success:
+            - Alien_configuring
+        ElasticSearchJDK_created:
+          node: ElasticSearchJDK
+          activity:
+            set_state: created
+          on-success:
+            - ElasticSearchJDK_configuring
+        AlienJDK_starting:
+          node: AlienJDK
+          activity:
+            set_state: starting
+          on-success:
+            - start_AlienJDK
+        configure_SambaClient:
+          node: SambaClient
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - SambaClient_configured
+        ElasticSearchJDK_started:
+          node: ElasticSearchJDK
+          activity:
+            set_state: started
+          on-success:
+            - ElasticSearch_initial
+        Network_install:
+          node: Network
+          activity:
+            delegate: install
+        ElasticSearchJDK_initial:
+          node: ElasticSearchJDK
+          activity:
+            set_state: initial
+          on-success:
+            - ElasticSearchJDK_creating
+        Alien_creating:
+          node: Alien
+          activity:
+            set_state: creating
+          on-success:
+            - create_Alien
+        ElasticSearch_created:
+          node: ElasticSearch
+          activity:
+            set_state: created
+          on-success:
+            - ElasticSearch_configuring
+        ReverseProxy_starting:
+          node: ReverseProxy
+          activity:
+            set_state: starting
+          on-success:
+            - start_ReverseProxy
+        start_ConsulTemplate:
+          node: ConsulTemplate
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - ConsulTemplate_started
+        ElasticSearchJDK_configured:
+          node: ElasticSearchJDK
+          activity:
+            set_state: configured
+          on-success:
+            - ElasticSearchJDK_starting
+        create_ReverseProxy:
+          node: ReverseProxy
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - ReverseProxy_created
+        SambaServer_started:
+          node: SambaServer
+          activity:
+            set_state: started
+          on-success:
+            - SambaClient_configuring
+        SambaServer_created:
+          node: SambaServer
+          activity:
+            set_state: created
+          on-success:
+            - SambaServer_configuring
+        configure_ElasticSearchJDK:
+          node: ElasticSearchJDK
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - ElasticSearchJDK_configured
+        create_SambaServer:
+          node: SambaServer
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - SambaServer_created
+        SambaServer_configured:
+          node: SambaServer
+          activity:
+            set_state: configured
+          on-success:
+            - SambaServer_starting
+        ConsulTemplate_configuring:
+          node: ConsulTemplate
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_ConsulTemplate
+        AlienJDK_configured:
+          node: AlienJDK
+          activity:
+            set_state: configured
+          on-success:
+            - AlienJDK_starting
+        configure_ConsulTemplate:
+          node: ConsulTemplate
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - ConsulTemplate_configured
+        create_Alien:
+          node: Alien
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - Alien_created
+        start_AlienJDK:
+          node: AlienJDK
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - AlienJDK_started
+        ConsulServerCompute_install:
+          node: BackendCompute
+          activity:
+            delegate: install
+          on-success:
+            - ConsulTemplate_configuring
+            - ConsulServer_initial
+            - Alien_configuring
+            - ConsulClient_initial
+            - ElasticSearchJDK_initial
+        SambaClient_starting:
+          node: SambaClient
+          activity:
+            set_state: starting
+          on-success:
+            - start_SambaClient
+        SambaClient_started:
+          node: SambaClient
+          activity:
+            set_state: started
+          on-success:
+            - Alien_configuring
+        ElasticSearch_starting:
+          node: ElasticSearch
+          activity:
+            set_state: starting
+          on-success:
+            - start_ElasticSearch
+        ConsulTemplate_creating:
+          node: ConsulTemplate
+          activity:
+            set_state: creating
+          on-success:
+            - create_ConsulTemplate
+        configure_Alien:
+          node: Alien
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - Alien_configured
+        start_ReverseProxy:
+          node: ReverseProxy
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - ReverseProxy_started
+        Alien_initial:
+          node: Alien
+          activity:
+            set_state: initial
+          on-success:
+            - Alien_creating
+        AlienJDK_initial:
+          node: AlienJDK
+          activity:
+            set_state: initial
+          on-success:
+            - AlienJDK_creating
+        create_ElasticSearch:
+          node: ElasticSearch
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - ElasticSearch_created
+        SambaServer_starting:
+          node: SambaServer
+          activity:
+            set_state: starting
+          on-success:
+            - start_SambaServer
+        ReverseProxy_started:
+          node: ReverseProxy
+          activity:
+            set_state: started
+          on-success:
+            - ConsulTemplate_configuring
+        ConsulTemplate_started:
+          node: ConsulTemplate
+          activity:
+            set_state: started
+        Alien_configured:
+          node: Alien
+          activity:
+            set_state: configured
+          on-success:
+            - Alien_starting
+        Alien_starting:
+          node: Alien
+          activity:
+            set_state: starting
+          on-success:
+            - start_Alien
+        AlienJDK_configuring:
+          node: AlienJDK
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_AlienJDK
+        ElasticSearchJDK_creating:
+          node: ElasticSearchJDK
+          activity:
+            set_state: creating
+          on-success:
+            - create_ElasticSearchJDK
+        ElasticSearch_creating:
+          node: ElasticSearch
+          activity:
+            set_state: creating
+          on-success:
+            - create_ElasticSearch
+        start_SambaClient:
+          node: SambaClient
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - SambaClient_started
+        AlienJDK_created:
+          node: AlienJDK
+          activity:
+            set_state: created
+          on-success:
+            - AlienJDK_configuring
+        SambaClient_initial:
+          node: SambaClient
+          activity:
+            set_state: initial
+          on-success:
+            - SambaClient_creating
+        ReverseProxy_initial:
+          node: ReverseProxy
+          activity:
+            set_state: initial
+          on-success:
+            - ReverseProxy_creating
+        SambaServer_configuring:
+          node: SambaServer
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_SambaServer
+        ReverseProxy_creating:
+          node: ReverseProxy
+          activity:
+            set_state: creating
+          on-success:
+            - create_ReverseProxy
+        start_Alien:
+          node: Alien
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - Alien_started
+        configure_SambaServer:
+          node: SambaServer
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - SambaServer_configured
+        SambaClient_configured:
+          node: SambaClient
+          activity:
+            set_state: configured
+          on-success:
+            - SambaClient_starting
+        ElasticSearchJDK_configuring:
+          node: ElasticSearchJDK
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_ElasticSearchJDK
+        SambaServerCompute_install:
+          node: FacadeCompute
+          activity:
+            delegate: install
+          on-success:
+            - SambaServer_initial
+            - ReverseProxy_initial
+            - ConsulTemplate_initial
+        AlienJDK_creating:
+          node: AlienJDK
+          activity:
+            set_state: creating
+          on-success:
+            - create_AlienJDK
+        SambaClient_configuring:
+          node: SambaClient
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_SambaClient
+        create_AlienJDK:
+          node: AlienJDK
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - AlienJDK_created
+        SambaClient_created:
+          node: SambaClient
+          activity:
+            set_state: created
+          on-success:
+            - SambaClient_configuring
+            - SambaServer_configuring
+        configure_AlienJDK:
+          node: AlienJDK
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - AlienJDK_configured
+        start_ElasticSearch:
+          node: ElasticSearch
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - ElasticSearch_started
+        create_ConsulTemplate:
+          node: ConsulTemplate
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - ConsulTemplate_created
+        ConsulServer_initial:
+          node: ConsulServer
+          activity:
+            set_state: initial
+          on-success:
+            - ConsulServer_creating
+        ConsulServer_creating:
+          node: ConsulServer
+          activity:
+            set_state: creating
+          on-success:
+            - create_ConsulServer
+        create_ConsulServer:
+          node: ConsulServer
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - ConsulServer_created
+        ConsulServer_created:
+          node: ConsulServer
+          activity:
+            set_state: created
+          on-success:
+            - ConsulServer_configuring
+        ConsulServer_configuring:
+          node: ConsulServer
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_ConsulServer
+        configure_ConsulServer:
+          node: ConsulServer
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - ConsulServer_configured
+        ConsulServer_configured:
+          node: ConsulServer
+          activity:
+            set_state: configured
+          on-success:
+            - ConsulServer_starting
+        ConsulServer_starting:
+          node: ConsulServer
+          activity:
+            set_state: starting
+          on-success:
+            - start_ConsulServer
+        start_ConsulServer:
+          node: ConsulServer
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - ConsulServer_started
+        ConsulServer_started:
+          node: ConsulServer
+          activity:
+            set_state: started
+          on-success:
+            - ConsulClient_configuring
+        ConsulClient_initial:
+          node: ConsulClient
+          activity:
+            set_state: initial
+          on-success:
+            - ConsulClient_creating
+        ConsulClient_creating:
+          node: ConsulClient
+          activity:
+            set_state: creating
+          on-success:
+            - create_ConsulClient
+        create_ConsulClient:
+          node: ConsulClient
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - ConsulClient_created
+        ConsulClient_created:
+          node: ConsulClient
+          activity:
+            set_state: created
+          on-success:
+            - ConsulServer_configuring
+            - ConsulClient_configuring
+        ConsulClient_configuring:
+          node: ConsulClient
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_ConsulClient
+        configure_ConsulClient:
+          node: ConsulClient
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - ConsulClient_configured
+        ConsulClient_configured:
+          node: ConsulClient
+          activity:
+            set_state: configured
+          on-success:
+            - ConsulClient_starting
+        ConsulClient_starting:
+          node: ConsulClient
+          activity:
+            set_state: starting
+          on-success:
+            - start_ConsulClient
+        start_ConsulClient:
+          node: ConsulClient
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - ConsulClient_started
+        ConsulClient_started:
+          node: ConsulClient
+          activity:
+            set_state: started
+          on-success:
+            - Alien_configuring
+    uninstall:
+      steps:
+        SambaServer_stopped:
+          node: SambaServer
+          activity:
+            set_state: stopped
+          on-success:
+            - SambaServer_deleting
+        AlienCompute_uninstall:
+          node: AlienCompute
+          activity:
+            delegate: uninstall
+        Alien_stopped:
+          node: Alien
+          activity:
+            set_state: stopped
+          on-success:
+            - Alien_deleting
+        ElasticSearchJDK_deleted:
+          node: ElasticSearchJDK
+          activity:
+            set_state: deleted
+          on-success:
+            - ConsulServerCompute_uninstall
+        AlienJDK_deleted:
+          node: AlienJDK
+          activity:
+            set_state: deleted
+          on-success:
+            - AlienCompute_uninstall
+        ElasticSearchJDK_stopped:
+          node: ElasticSearchJDK
+          activity:
+            set_state: stopped
+          on-success:
+            - ElasticSearchJDK_deleting
+        SambaServer_deleted:
+          node: SambaServer
+          activity:
+            set_state: deleted
+          on-success:
+            - SambaServerCompute_uninstall
+        SambaServerCompute_uninstall:
+          node: FacadeCompute
+          activity:
+            delegate: uninstall
+        AlienJDK_deleting:
+          node: AlienJDK
+          activity:
+            set_state: deleting
+          on-success:
+            - AlienJDK_deleted
+        SambaServer_stopping:
+          node: SambaServer
+          activity:
+            set_state: stopping
+          on-success:
+            - stop_SambaServer
+        stop_SambaServer:
+          node: SambaServer
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.stop
+          on-success:
+            - SambaServer_stopped
+        ConsulTemplate_stopping:
+          node: ConsulTemplate
+          activity:
+            set_state: stopping
+          on-success:
+            - ConsulTemplate_stopped
+        ElasticSearch_stopped:
+          node: ElasticSearch
+          activity:
+            set_state: stopped
+          on-success:
+            - ElasticSearch_deleting
+        ElasticSearch_deleted:
+          node: ElasticSearch
+          activity:
+            set_state: deleted
+          on-success:
+            - ElasticSearchJDK_stopping
+        ConsulServerCompute_uninstall:
+          node: BackendCompute
+          activity:
+            delegate: uninstall
+        SambaClient_stopped:
+          node: SambaClient
+          activity:
+            set_state: stopped
+          on-success:
+            - SambaClient_deleting
+        SambaClient_stopping:
+          node: SambaClient
+          activity:
+            set_state: stopping
+          on-success:
+            - SambaClient_stopped
+        Network_uninstall:
+          node: Network
+          activity:
+            delegate: uninstall
+        Alien_deleting:
+          node: Alien
+          activity:
+            set_state: deleting
+          on-success:
+            - Alien_deleted
+        ReverseProxy_deleting:
+          node: ReverseProxy
+          activity:
+            set_state: deleting
+          on-success:
+            - ReverseProxy_deleted
+        ElasticSearch_stopping:
+          node: ElasticSearch
+          activity:
+            set_state: stopping
+          on-success:
+            - ElasticSearch_stopped
+        SambaClient_deleted:
+          node: SambaClient
+          activity:
+            set_state: deleted
+          on-success:
+            - AlienCompute_uninstall
+        ReverseProxy_stopped:
+          node: ReverseProxy
+          activity:
+            set_state: stopped
+          on-success:
+            - ReverseProxy_deleting
+        AlienJDK_stopped:
+          node: AlienJDK
+          activity:
+            set_state: stopped
+          on-success:
+            - AlienJDK_deleting
+        ConsulTemplate_deleted:
+          node: ConsulTemplate
+          activity:
+            set_state: deleted
+          on-success:
+            - SambaServerCompute_uninstall
+        ConsulTemplate_stopped:
+          node: ConsulTemplate
+          activity:
+            set_state: stopped
+          on-success:
+            - ConsulTemplate_deleting
+        ElasticSearchJDK_deleting:
+          node: ElasticSearchJDK
+          activity:
+            set_state: deleting
+          on-success:
+            - ElasticSearchJDK_deleted
+        Alien_deleted:
+          node: Alien
+          activity:
+            set_state: deleted
+          on-success:
+            - AlienJDK_stopping
+        ElasticSearch_deleting:
+          node: ElasticSearch
+          activity:
+            set_state: deleting
+          on-success:
+            - ElasticSearch_deleted
+        ReverseProxy_deleted:
+          node: ReverseProxy
+          activity:
+            set_state: deleted
+          on-success:
+            - SambaServerCompute_uninstall
+        Alien_stopping:
+          node: Alien
+          activity:
+            set_state: stopping
+          on-success:
+            - Alien_stopped
+        ReverseProxy_stopping:
+          node: ReverseProxy
+          activity:
+            set_state: stopping
+          on-success:
+            - ReverseProxy_stopped
+        ElasticSearchJDK_stopping:
+          node: ElasticSearchJDK
+          activity:
+            set_state: stopping
+          on-success:
+            - ElasticSearchJDK_stopped
+        SambaClient_deleting:
+          node: SambaClient
+          activity:
+            set_state: deleting
+          on-success:
+            - SambaClient_deleted
+        AlienJDK_stopping:
+          node: AlienJDK
+          activity:
+            set_state: stopping
+          on-success:
+            - AlienJDK_stopped
+        ConsulTemplate_deleting:
+          node: ConsulTemplate
+          activity:
+            set_state: deleting
+          on-success:
+            - ConsulTemplate_deleted
+        SambaServer_deleting:
+          node: SambaServer
+          activity:
+            set_state: deleting
+          on-success:
+            - SambaServer_deleted
+        ConsulServer_stopping:
+          node: ConsulServer
+          activity:
+            set_state: stopping
+          on-success:
+            - ConsulServer_stopped
+        ConsulServer_stopped:
+          node: ConsulServer
+          activity:
+            set_state: stopped
+          on-success:
+            - ConsulServer_deleting
+        ConsulServer_deleting:
+          node: ConsulServer
+          activity:
+            set_state: deleting
+          on-success:
+            - ConsulServer_deleted
+        ConsulServer_deleted:
+          node: ConsulServer
+          activity:
+            set_state: deleted
+          on-success:
+            - ConsulServerCompute_uninstall
+        ConsulClient_stopping:
+          node: ConsulClient
+          activity:
+            set_state: stopping
+          on-success:
+            - ConsulClient_stopped
+        ConsulClient_stopped:
+          node: ConsulClient
+          activity:
+            set_state: stopped
+          on-success:
+            - ConsulClient_deleting
+        ConsulClient_deleting:
+          node: ConsulClient
+          activity:
+            set_state: deleting
+          on-success:
+            - ConsulClient_deleted
+        ConsulClient_deleted:
+          node: ConsulClient
+          activity:
+            set_state: deleted
+          on-success:
+            - ConsulServerCompute_uninstall
