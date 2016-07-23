@@ -3,7 +3,7 @@
   "ports": {
     "dns" : -1,
     "http" : -1,
-    "https": 8500
+    "https": %CONSUL_API_PORT%
   },
   "key_file": "/etc/consul/ssl/client-key.pem",
   "cert_file": "/etc/consul/ssl/client-cert.pem",

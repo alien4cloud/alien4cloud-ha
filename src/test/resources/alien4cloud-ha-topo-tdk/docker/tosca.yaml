@@ -6,7 +6,8 @@ template_author: Fastconnect
 
 imports:
   - docker-provider-types:*
-  - alien4cloud-ha:*
+  - alien4cloud-ha-types:*
+  - alien4cloud-ha-topo-3computes:*
 
 topology_template:
 
@@ -16,7 +17,7 @@ topology_template:
       properties:
         network_name: alienNet
         cidr: 10.67.79.0/24    
-    ConsulServerCompute:
+    BackendCompute:
       type: com.toscaruntime.docker.nodes.Container
       properties:
         image_id: toscaruntime/ubuntu-trusty
@@ -26,17 +27,17 @@ topology_template:
             max_instances: 3
             min_instances: 3
             default_instances: 3
-    ElasticSearchCompute:
-      type: com.toscaruntime.docker.nodes.Container
-      properties:
-        image_id: toscaruntime/ubuntu-trusty
-      capabilities:
-        scalable:
-          properties:
-            max_instances: 2
-            min_instances: 2
-            default_instances: 2            
-    ReverseProxyCompute:
+    # ElasticSearchCompute:
+    #   type: com.toscaruntime.docker.nodes.Container
+    #   properties:
+    #     image_id: toscaruntime/ubuntu-trusty
+    #   capabilities:
+    #     scalable:
+    #       properties:
+    #         max_instances: 2
+    #         min_instances: 2
+    #         default_instances: 2            
+    FrontCompute:
       type: com.toscaruntime.docker.nodes.Container
       properties:
         image_id: toscaruntime/ubuntu-trusty
@@ -60,8 +61,8 @@ topology_template:
             max_instances: 10
             min_instances: 1
             default_instances: 1            
-    SambaServerCompute:
-      type: com.toscaruntime.docker.nodes.Container
-      properties:
-        image_id: toscaruntime/ubuntu-trusty
+    # SambaServerCompute:
+    #   type: com.toscaruntime.docker.nodes.Container
+    #   properties:
+    #     image_id: toscaruntime/ubuntu-trusty
 

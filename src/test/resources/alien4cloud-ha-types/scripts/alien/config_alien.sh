@@ -3,6 +3,8 @@
 A4C_CONFIG="/etc/alien4cloud/alien4cloud-config.yml"
 
 CONNECTED_TO_CONSUL=$(</tmp/a4c/work/${NODE}/connectedToConsulAgent)
+AGENT_API_PORT=$(</tmp/a4c/work/${NODE}/ConnectToConsulAgent/agentAPIPort)
+AGENT_IP=$(</tmp/a4c/work/${NODE}/ConnectToConsulAgent/agentIp)
 
 # replace the alien data dir
 echo "A4C data dir is ${DATA_DIR}"
@@ -83,6 +85,11 @@ sudo echo "cluster.name: ${cluster_name}" > /etc/alien4cloud/elasticsearch.yml
 if [ "${CONNECTED_TO_CONSUL}" == "true" ]; then
   echo "A4C is connected to Consul, activate HA"
   sudo sed -i -e "s/ha_enabled\: \(.*\)/ha_enabled\: true/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/consulAgentIp\: \(.*\)/consulAgentIp\: ${AGENT_IP}/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/consulAgentPort\: \(.*\)/consulAgentPort\: ${AGENT_API_PORT}/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/#\(.*\)consulAgentIp\: \(.*\)/consulAgentIp\: ${AGENT_IP}/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/#\(.*\)consulAgentPort\: \(.*\)/consulAgentPort\: ${AGENT_API_PORT}/g" ${A4C_CONFIG}
+
   if [ "$TLS_ENABLED" == "true" ]; then
       sudo sed -i -e "s/consul_tls_enabled\: \(.*\)/consul_tls_enabled\: true/g" ${A4C_CONFIG}
       sudo sed -i -e "s@keyStorePath\: \(.*\)@keyStorePath\: $KEY_STORE_PATH@g" ${A4C_CONFIG}

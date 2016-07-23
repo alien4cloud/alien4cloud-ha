@@ -1,7 +1,26 @@
 #!/bin/bash -e
 
+require_env () {
+  VAR_NAME=$1
+  if [ ! "${!VAR_NAME}" ]; then
+    echo "Required env var <$VAR_NAME> not found !" 
+    echo "Required env var <$VAR_NAME> not found !" >&2; exit 1;
+  else
+    echo "The value for required var <$VAR_NAME> is: ${!VAR_NAME}"
+  fi
+}
+
+require_envs () {
+  VAR_LIST=$1
+  IFS=',';
+  for VAR_NAME in $VAR_LIST;
+  do
+    require_env ${VAR_NAME}
+  done
+}
+
 # eval the config file and replace the listed env vars
-# will not work if VAR_NAME or VAR_VALUE contains '@' (but will if they contains '/')
+# will not work if VAR_NAME or VAR_VALUE contains '@' (but will if they contain '/' !)
 eval_conf_file () {
   SRC_FILE=$1
   DEST_FILE=$2
@@ -19,8 +38,11 @@ eval_conf_file () {
   sudo cat $DEST_FILE
 }
 
+require_envs "CONSUL_DATA_DIR,INSTANCE,CONSUL_BIND_ADDRESS"
+require_env "CONSUL_API_PORT"
+
 # evaluate and put the basic config
-eval_conf_file $configs/basic_config.json /etc/consul/01_basic_config.json "CONSUL_DATA_DIR,INSTANCE,CONSUL_BIND_ADDRESS"
+eval_conf_file $configs/basic_config.json /etc/consul/01_basic_config.json "CONSUL_DATA_DIR,INSTANCE,CONSUL_BIND_ADDRESS,CONSUL_API_PORT"
 
 if [ "$CONSUL_AGENT_MODE" == "server" ]; then
   BOOTSTRAP_EXPECT=$(echo ${INSTANCES} | tr ',' ' ' | wc -w)
@@ -37,7 +59,7 @@ if [ "$TLS_ENABLED" == "true" ]; then
   TEMP_DIR=`mktemp -d`
 
 	# evaluate and put the secured config
-  eval_conf_file $configs/${CONSUL_AGENT_MODE}_secured_config.json /etc/consul/04_${CONSUL_AGENT_MODE}_secured_config.json
+  eval_conf_file $configs/${CONSUL_AGENT_MODE}_secured_config.json /etc/consul/04_${CONSUL_AGENT_MODE}_secured_config.json "CONSUL_API_PORT"
 
 	SSL_REPO=/etc/consul/ssl
 	# Generate a keypair for the server or client, and sign it with the CA
@@ -66,5 +88,6 @@ sleep 10
 echo "Consul has following members until now"
 sudo consul members
 
-export CONSUL_SERVER_ADDRESS=${CONSUL_BIND_ADDRESS}:8301
-export CONSUL_CLIENT_ADDRESS=${CONSUL_BIND_ADDRESS}:8500
+# export API_PORT=:8500
+# export CONSUL_SERVER_ADDRESS=${CONSUL_BIND_ADDRESS}:8301
+# export CONSUL_CLIENT_ADDRESS=${CONSUL_BIND_ADDRESS}:${API_PORT}
