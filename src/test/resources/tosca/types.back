@@ -171,10 +171,10 @@ topology_template:
             node: ElasticSearch
             capability: alien.capabilities.ElasticSearch
             relationship: alien4cloud.relationships.ConnectToElasticSearch
-        # - consul:
-        #     node: AlienConsulClient
-        #     capability: alien4cloud.consul.capabilities.ConsulAgent
-        #     relationship: alien4cloud.consul.relationships.ConnectToConsulAgent
+        - consul:
+            node: AlienConsulClient
+            capability: alien4cloud.consul.capabilities.ConsulAgent
+            relationship: alien4cloud.consul.relationships.ConnectToConsulAgent
         # - dependency:
         #     node: SambaClient
         #     capability: tosca.capabilities.Node

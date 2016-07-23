@@ -9,13 +9,16 @@ echo "A4C data dir is ${DATA_DIR}"
 sudo sed -i -e "s@alien\: \(.*\)@alien\: ${DATA_DIR}@g" ${A4C_CONFIG}
 # set the alien port
 sudo sed -i -e "s/port\: \(.*\)/port\: $ALIEN_PORT/g" ${A4C_CONFIG}
+# set the alien protocol
+sudo sed -i -e "s/serverProtocol\: \(.*\)/serverProtocol\: $SERVER_PROTOCOL/g" ${A4C_CONFIG}
 
-if [ "$SSL_ENABLED" == "true" ]; then
+if [ "$SERVER_PROTOCOL" == "https" ]; then
   # enable SSL
-  sudo sed -i -e "s/# ssl\:/ ssl\:/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/#ssl\:/ssl\:/g" ${A4C_CONFIG}
 
-  KEYSTORE_PWD="ljsfejnfsn"
-  KEY_PWD=":k,lknkhgvkjnkmkj"
+  # FIXME: can't be different !!! some confusion somewhere ?
+  SERVER_KEYSTORE_PWD="changeit"
+  KEY_PWD="${SERVER_KEYSTORE_PWD}"
 
   AC4_SSL_DIR=/etc/alien4cloud/ssl
   sudo mkdir -p $AC4_SSL_DIR
@@ -26,27 +29,29 @@ if [ "$SSL_ENABLED" == "true" ]; then
   sudo openssl genrsa -out $TEMP_DIR/server-key.pem 4096
   sudo openssl req -subj "/CN=alien4cloud.org" -sha256 -new -key $TEMP_DIR/server-key.pem -out $TEMP_DIR/server.csr
   # this cert will be used for the https api
+  sudo echo "subjectAltName = IP:${ALIEN_IP}" > $TEMP_DIR/extfile.cnf
   sudo openssl x509 -req -days 365 -sha256 \
     -in $TEMP_DIR/server.csr -CA $ssl/ca.pem -CAkey $ssl/ca-key.pem \
     -CAcreateserial -out $TEMP_DIR/server-cert.pem \
-    -passin pass:${CA_PASSPHRASE}
-
+    -passin pass:${CA_PASSPHRASE} \
+    -extfile $TEMP_DIR/extfile.cnf 
+  
   # poulate key store
   sudo openssl pkcs12 -export -name alien4cloudClient \
     -in $TEMP_DIR/server-cert.pem -inkey $TEMP_DIR/server-key.pem \
     -out $TEMP_DIR/server-keystore.p12 -chain \
     -CAfile $ssl/ca.pem -caname root \
-    -password pass:$KEYSTORE_PWD
+    -password pass:$SERVER_KEYSTORE_PWD
 
   sudo keytool -importkeystore -destkeystore $AC4_SSL_DIR/server-keystore.jks \
     -srckeystore $TEMP_DIR/server-keystore.p12 -srcstoretype pkcs12 \
-    -alias alien4cloudClient -deststorepass $KEYSTORE_PWD \
-    -srckeypass $KEY_PWD -srcstorepass $KEYSTORE_PWD
+    -alias alien4cloudClient -deststorepass $SERVER_KEYSTORE_PWD \
+    -srckeypass $KEY_PWD -srcstorepass $SERVER_KEYSTORE_PWD
 
   sudo rm -rf $TEMP_DIR
 
   sudo sed -i -e "s@#  key-store\: \(.*\)@  key-store\: \"$AC4_SSL_DIR/server-keystore.jks\"@g" ${A4C_CONFIG}
-  sudo sed -i -e "s/#  key-store-password\: \(.*\)/  key-store-password\: \"$KEYSTORE_PWD\"/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/#  key-store-password\: \(.*\)/  key-store-password\: \"$SERVER_KEYSTORE_PWD\"/g" ${A4C_CONFIG}
   sudo sed -i -e "s/#  key-password\: \(.*\)/  key-password\: \"$KEY_PWD\"/g" ${A4C_CONFIG}
 fi
 
@@ -84,11 +89,10 @@ if [ "${CONNECTED_TO_CONSUL}" == "true" ]; then
       sudo sed -i -e "s@trustStorePath\: \(.*\)@trustStorePath\: $TRUST_STORE_PATH@g" ${A4C_CONFIG}
       sudo sed -i -e "s/keyStoresPwd\: \(.*\)/keyStoresPwd\: $KEYSTORE_PWD/g" ${A4C_CONFIG}
   else
-      echo "A4C is not connected to Consul, desactivate HA"
       sudo sed -i -e "s/consul_tls_enabled\: \(.*\)/consul_tls_enabled\: false/g" ${A4C_CONFIG}
   fi
 else
-  echo "only ${number_of_instances} will run, deactivate HA"
+  echo "A4C is not connected to Consul, desactivate HA"
   sudo sed -i -e "s/ha_enabled\: \(.*\)/ha_enabled\: false/g" ${A4C_CONFIG}
 fi
 

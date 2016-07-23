@@ -5,7 +5,7 @@ template_version: 1.0.0-SNAPSHOT
 template_author: Fastconnect
 
 imports:
-  - jdk-type:*
+  - docker-provider-types:*
   - alien4cloud-ha:*
 
 topology_template:
@@ -41,10 +41,10 @@ topology_template:
       properties:
         image_id: toscaruntime/ubuntu-trusty
         exposed_ports:
-          - port: 8080
+          - port: 8443
         port_mappings:
-          - from: 8080
-            to: 50001
+          - from: 8443
+            to: 8443
       requirements:
         - network:
             node: Network
@@ -58,8 +58,8 @@ topology_template:
         scalable:
           properties:
             max_instances: 10
-            min_instances: 2
-            default_instances: 2            
+            min_instances: 1
+            default_instances: 1            
     SambaServerCompute:
       type: com.toscaruntime.docker.nodes.Container
       properties:

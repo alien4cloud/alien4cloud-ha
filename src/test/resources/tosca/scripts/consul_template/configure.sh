@@ -8,9 +8,15 @@ command -v openssl >/dev/null 2>&1 || { echo "I require openssl but it's not ins
 # generate the nginx config template
 TEMPLATE_PATH="${CONF_PATH}/nginx.conf.ctpl"
 sudo cp $config/nginx.conf.ctpl $TEMPLATE_PATH
-sudo sed -i -e "s/%LISTEN_PORT%/${LISTEN_PORT}/g" $TEMPLATE_PATH
 sudo sed -i -e "s/%SERVICE_PORT%/${SERVICE_PORT}/g" $TEMPLATE_PATH
 sudo sed -i -e "s/%SERVER_NAME%/${SERVER_NAME}/g" $TEMPLATE_PATH
+if [ "$TARGET_PROTOCOL" == "https" ]; then
+	sudo sed -i -e "s/%LISTEN_PORT%/${LISTEN_PORT} ssl/g" $TEMPLATE_PATH
+	sudo sed -i -e "s/%PROTOCOL%/https/g" $TEMPLATE_PATH
+else
+	sudo sed -i -e "s/%LISTEN_PORT%/${LISTEN_PORT}/g" $TEMPLATE_PATH
+	sudo sed -i -e "s/%PROTOCOL%/http/g" $TEMPLATE_PATH
+fi
 
 if [ "$TLS_ENABLED" == "true" ]; then
 	TEMP_DIR=`mktemp -d`

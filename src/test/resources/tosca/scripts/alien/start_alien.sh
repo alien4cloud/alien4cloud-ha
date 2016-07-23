@@ -1,10 +1,10 @@
 #!/bin/bash -e
 
-healthCheckUrl="rest/latest/health/check"
+ALIEN_URL="${SERVER_PROTOCOL}://localhost:${ALIEN_PORT}/rest/latest/health/check"
 
 get_response_code() {
 
-  port=$1
+  url=$1
 
   set +e
 
@@ -12,11 +12,11 @@ get_response_code() {
   wget_cmd=$(which wget)
 
   if [ ! -z ${curl_cmd} ]; then
-    response_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${port}/${healthCheckUrl})
+    response_code=$(curl -s --insecure -o /dev/null -w "%{http_code}" ${url})
   elif [ ! -z ${wget_cmd} ]; then
-    response_code=$(wget --spider -S "http://localhost:${port}/${healthCheckUrl}" 2>&1 | grep "HTTP/" | awk '{print $2}' | tail -1)
+    response_code=$(wget --spider --no-check-certificate -S "${url}" 2>&1 | grep "HTTP/" | awk '{print $2}' | tail -1)
   else
-    echo "Failed to retrieve response code from http://localhost:${port}/${healthCheckUrl}: Neither 'curl' nor 'wget' were found on the system"
+    echo "Failed to retrieve response code from ${url}: Neither 'curl' nor 'wget' were found on the system"
     exit 1;
   fi
 
@@ -28,17 +28,17 @@ get_response_code() {
 
 wait_for_server() {
 
-  port=$1
+  url=$1
   server_name=$2
 
   started=false
 
-  echo "Running ${server_name} liveness detection on port ${port}"
+  echo "Running ${server_name} liveness detection on url ${url}"
 
   for i in $(seq 1 360)
   do
-    response_code=$(get_response_code ${port})
-    echo "[GET] http://localhost:${port}/${healthCheckUrl} ${response_code}"
+    response_code=$(get_response_code ${url})
+    echo "[GET] ${url} ${response_code}"
     if [ ${response_code} -eq 200 ] ; then
       started=true
       break
@@ -54,4 +54,4 @@ wait_for_server() {
 }
 
 sudo /etc/init.d/alien start
-wait_for_server $ALIEN_PORT 'alien4cloud'
+wait_for_server $ALIEN_URL 'alien4cloud'

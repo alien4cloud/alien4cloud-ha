@@ -3,7 +3,7 @@ server {
         listen %LISTEN_PORT%;
         server_name %SERVER_NAME%;
         location / {
-                proxy_pass      http://{{key "service/a4c/leader"}}/;
+                proxy_pass      %PROTOCOL%://{{key "service/a4c/leader"}}/;
         }
 }
 {{ else }}
