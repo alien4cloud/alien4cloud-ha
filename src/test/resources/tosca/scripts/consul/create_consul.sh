@@ -12,6 +12,7 @@ fi
 
 CONSUL_TMP_ZIP=/tmp/consul.zip
 
+# TODO: use a funtion 
 curl -Lo ${CONSUL_TMP_ZIP} -O ${CONSUL_DOWNLOAD_URL}
 
 echo "Downloaded consul binary from ${CONSUL_DOWNLOAD_URL} to temporary destination ${CONSUL_TMP_ZIP}"

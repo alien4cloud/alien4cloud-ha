@@ -1,15 +1,15 @@
-#tosca_definitions_version: alien_dsl_1_1_0
-tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
+tosca_definitions_version: alien_dsl_1_1_0
+#tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
 
 template_name: alien4cloud-ha
 template_version: 1.0.0-SNAPSHOT
 template_author: Fastconnect
 
 imports:
-#  - "tosca-normative-types:1.0.0-SNAPSHOT"
-#  - "jdk-type:1.0.0-SNAPSHOT"
-  - tosca-normative-types:*
-  - jdk-type:*
+  - "tosca-normative-types:1.0.0-SNAPSHOT"
+  - "jdk-type:1.0.0-SNAPSHOT"
+#  - tosca-normative-types:*
+#  - jdk-type:*
 
 topology_template:
 
@@ -29,7 +29,7 @@ topology_template:
       required: true
       default: https
       constraints:
-        - valid_values: ["http", "https"]            
+        - valid_values: ["http", "https"]
     alien_data_dir:
       description: The location where A4C will store data on local FS.
       type: string
@@ -111,6 +111,8 @@ topology_template:
       type: alien.ha.types.Nginx
       properties:
         listen_port: { get_input: rproxy_port }
+        ca_passphrase: { get_input: ssl_ca_passphrase }
+        target_protocol: { get_input: alien_protocol }
       requirements:
         - host: ReverseProxyCompute
     ConsulTemplate:
@@ -171,14 +173,14 @@ topology_template:
             node: ElasticSearch
             capability: alien.capabilities.ElasticSearch
             relationship: alien4cloud.relationships.ConnectToElasticSearch
-        # - consul:
-        #     node: AlienConsulClient
-        #     capability: alien4cloud.consul.capabilities.ConsulAgent
-        #     relationship: alien4cloud.consul.relationships.ConnectToConsulAgent
-        # - dependency:
-        #     node: SambaClient
-        #     capability: tosca.capabilities.Node
-        #     relationship: tosca.relationships.DependsOn
+        - consul:
+            node: AlienConsulClient
+            capability: alien4cloud.consul.capabilities.ConsulAgent
+            relationship: alien4cloud.consul.relationships.ConnectToConsulAgent
+        - dependency:
+            node: SambaClient
+            capability: tosca.capabilities.Node
+            relationship: tosca.relationships.DependsOn
     ElasticSearchJDK:
       type: alien.nodes.JDK
       requirements:
@@ -192,20 +194,20 @@ topology_template:
             node: ElasticSearchJDK
             capability: alien.capabilities.JDK
             relationship: alien.relationships.JavaSoftwareHostedOnJDK
-    # SambaServer:
-    #   type: alien4cloud.samba.nodes.SambaServer
-    #   requirements:
-    #     - host: SambaServerCompute
-    # SambaClient:
-    #   type: alien4cloud.samba.nodes.SambaClient
-    #   requirements:
-    #     - host: AlienCompute
-    #     - smb_server:
-    #         node: SambaServer
-    #         capability: alien4cloud.samba.capabilities.SambaServer
-    #         relationship: alien4cloud.samba.relationships.ConnectsToSambaServer
-    #         properties:
-    #           mount_point: { get_input: alien_data_dir }
+    SambaServer:
+      type: alien4cloud.samba.nodes.SambaServer
+      requirements:
+        - host: SambaServerCompute
+    SambaClient:
+      type: alien4cloud.samba.nodes.SambaClient
+      requirements:
+        - host: AlienCompute
+        - smb_server:
+            node: SambaServer
+            capability: alien4cloud.samba.capabilities.SambaServer
+            relationship: alien4cloud.samba.relationships.ConnectsToSambaServer
+            properties:
+              mount_point: { get_input: alien_data_dir }
 
 node_types:
 
@@ -402,7 +404,7 @@ node_types:
         required: true
         default: http
         constraints:
-          - valid_values: ["http", "https"]         
+          - valid_values: ["http", "https"]
       ca_passphrase:
         description: the provided CA cert passphrase
         type: string
@@ -466,8 +468,18 @@ node_types:
         type: integer
         required: true
         default: 80
+      target_protocol:
+        type: string
+        required: true
+        default: http
+        constraints:
+          - valid_values: ["http", "https"]
+      ca_passphrase:
+        description: The provided CA certificate passphrase.
+        type: string
+        required: false
     attributes:
-      service_url: { concat: ["http://", get_attribute: [HOST, public_ip_address], ":", get_property: [SELF, listen_port]] }
+      service_url: { concat: [get_property: [SELF, target_protocol], "://", get_attribute: [HOST, public_ip_address], ":", get_property: [SELF, listen_port]] }
     interfaces:
       Standard:
         create:
@@ -476,11 +488,15 @@ node_types:
           inputs:
             LISTEN_PORT: { get_property: [SELF, listen_port] }
             SERVER_NAME: { get_attribute: [HOST, public_ip_address] }
+            TARGET_PROTOCOL: { get_property: [SELF, target_protocol] }
+            CA_PASSPHRASE: { get_property: [SELF, ca_passphrase] }
           implementation: scripts/nginx/configure.sh
         start:
           implementation: scripts/nginx/start.sh
     artifacts:
       - config: config/nginx
+        type: tosca.artifacts.File
+      - ssl: ssl
         type: tosca.artifacts.File
 
   alien.ha.types.ConsulTemplate4Nginx:
@@ -509,12 +525,18 @@ node_types:
         description: the provided CA cert passphrase
         type: string
         required: false
+      facade_protocol:
+        type: string
+        required: true
+        default: http
+        constraints:
+          - valid_values: ["http", "https"]
       target_protocol:
         type: string
         required: true
         default: http
         constraints:
-          - valid_values: ["http", "https"]         
+          - valid_values: ["http", "https"]
     interfaces:
       Standard:
         create:
@@ -528,6 +550,7 @@ node_types:
             TLS_ENABLED: { get_property: [SELF, tls_enabled] }
             CA_PASSPHRASE: { get_property: [SELF, ca_passphrase] }
             TARGET_PROTOCOL: { get_property: [SELF, target_protocol] }
+            FACADE_PROTOCOL: { get_property: [SELF, facade_protocol] }
           implementation: scripts/consul_template/configure.sh
         start:
           implementation: scripts/consul_template/start.sh
