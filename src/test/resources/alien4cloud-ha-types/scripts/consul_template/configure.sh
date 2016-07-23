@@ -1,9 +1,9 @@
 #!/bin/bash -e
+source $commons/commons.sh
+require_bin openssl
+require_envs "LISTEN_PORT SERVICE_PORT SERVER_NAME FRONT_PROTOCOL TLS_ENABLED"
 
 CONF_PATH="/etc/consul_template"
-
-# check dependencies
-command -v openssl >/dev/null 2>&1 || { echo "I require openssl but it's not installed.  Aborting." >&2; exit 1; }
 
 # generate the nginx config template
 TEMPLATE_PATH="${CONF_PATH}/nginx.conf.ctpl"

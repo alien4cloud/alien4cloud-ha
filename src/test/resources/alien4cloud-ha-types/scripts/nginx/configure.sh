@@ -1,10 +1,10 @@
 #!/bin/bash -e
+source $commons/commons.sh
+require_envs "LISTEN_PORT SERVICE_PORT SERVER_NAME CA_PASSPHRASE TARGET_PROTOCOL FRONT_PROTOCOL"
 
 # replace the default web site
 sudo cp -f $config/index.html /usr/share/nginx/html/
 sudo cp -f $config/alien4cloud-logo.png /usr/share/nginx/html/
-
-
 
 if [ "$TARGET_PROTOCOL" == "https" -o "$FRONT_PROTOCOL" == "https" ]; then
   echo "activating SSL on reverse proxy"

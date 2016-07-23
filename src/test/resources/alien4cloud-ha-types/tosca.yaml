@@ -1,15 +1,15 @@
-#tosca_definitions_version: alien_dsl_1_1_0
-tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
+tosca_definitions_version: alien_dsl_1_1_0
+#tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
 
 template_name: alien4cloud-ha-types
 template_version: 1.0.0-SNAPSHOT
 template_author: Fastconnect
 
 imports:
-#  - "tosca-normative-types:1.0.0-SNAPSHOT"
-#  - "jdk-type:1.0.0-SNAPSHOT"
-  - tosca-normative-types:*
-  - jdk-type:*
+  - "tosca-normative-types:1.0.0-SNAPSHOT"
+  - "jdk-type:1.0.0-SNAPSHOT"
+#  - tosca-normative-types:*
+#  - jdk-type:*
 
 node_types:
 
@@ -91,6 +91,8 @@ node_types:
         type: tosca.artifacts.File
       - ssl: ssl
         type: tosca.artifacts.File
+      - commons: scripts/commons
+        type: tosca.artifacts.File
 
   alien4cloud.consul.nodes.ConsulClient:
     derived_from: alien4cloud.consul.nodes.ConsulAgent
@@ -127,6 +129,8 @@ node_types:
       - configs: config/consul
         type: tosca.artifacts.File
       - ssl: ssl
+        type: tosca.artifacts.File
+      - commons: scripts/commons
         type: tosca.artifacts.File
 
   alien.nodes.ElasticSearch:
@@ -168,6 +172,8 @@ node_types:
           implementation: scripts/elasticsearch/start_elasticsearch.sh
     artifacts:
       - configs: config/elasticsearch
+        type: tosca.artifacts.File
+      - commons: scripts/commons
         type: tosca.artifacts.File
 
   alien.nodes.Alien:
@@ -260,6 +266,8 @@ node_types:
         type: tosca.artifacts.File
       - ssl: ssl
         type: tosca.artifacts.File
+      - commons: scripts/commons
+        type: tosca.artifacts.File
 
   alien.ha.types.Nginx:
     derived_from: tosca.nodes.SoftwareComponent
@@ -309,6 +317,8 @@ node_types:
       - config: config/nginx
         type: tosca.artifacts.File
       - ssl: ssl
+        type: tosca.artifacts.File
+      - commons: scripts/commons
         type: tosca.artifacts.File
 
   alien.ha.types.ConsulTemplate4Nginx:
@@ -371,6 +381,8 @@ node_types:
         type: tosca.artifacts.File
       - ssl: ssl
         type: tosca.artifacts.File
+      - commons: scripts/commons
+        type: tosca.artifacts.File
 
   alien4cloud.samba.nodes.SambaServer:
     derived_from: tosca.nodes.SoftwareComponent
@@ -400,6 +412,8 @@ node_types:
     artifacts:
       - config: config/samba/smb.conf
         type: tosca.artifacts.File
+      - commons: scripts/commons
+        type: tosca.artifacts.File
 
   alien4cloud.samba.nodes.SambaClient:
     derived_from: tosca.nodes.SoftwareComponent
@@ -417,6 +431,9 @@ node_types:
     interfaces:
       Standard:
         create: scripts/smbClient/install.sh
+    artifacts:
+      - commons: scripts/commons
+        type: tosca.artifacts.File
 
 capability_types:
 
@@ -429,7 +446,7 @@ capability_types:
         type: integer
         description: Port for http/https API.
         required: true
-        default: 8500      
+        default: 8500
   alien4cloud.consul.capabilities.ConsulClient:
     derived_from: tosca.capabilities.Root
     description: >
@@ -489,6 +506,9 @@ relationship_types:
           inputs:
             CONSUL_SERVER_ADDRESS: { get_attribute: [TARGET, ip_address] }
           implementation: scripts/consul/join_consul_cluster.sh
+    artifacts:
+      - commons: scripts/commons
+        type: tosca.artifacts.File
   alien4cloud.consul.relationships.ConnectToConsulAgent:
     derived_from: tosca.relationships.ConnectsTo
     valid_target_types: [alien4cloud.consul.capabilities.ConsulAgent]
@@ -510,6 +530,8 @@ relationship_types:
     artifacts:
       - ssl: ssl
         type: tosca.artifacts.File
+      - commons: scripts/commons
+        type: tosca.artifacts.File
   alien4cloud.relationships.ConnectToElasticSearch:
     derived_from: tosca.relationships.ConnectsTo
     valid_target_types: [alien.capabilities.ElasticSearch]
@@ -522,6 +544,9 @@ relationship_types:
             ES_PORT: { get_property: [TARGET, listen_port] }
             CLUSTER_NAME: { get_property: [TARGET, cluster_name] }
           implementation: scripts/elasticsearch/ConnectToElasticSearch/pre_configure_source.sh
+    artifacts:
+      - commons: scripts/commons
+        type: tosca.artifacts.File
   alien4cloud.samba.relationships.ConnectsToSambaServer:
     derived_from: tosca.relationships.ConnectsTo
     valid_target_types: [alien4cloud.samba.capabilities.SambaServer]
@@ -541,3 +566,6 @@ relationship_types:
           inputs:
             MOUNT_POINT: { get_property: [SELF, mount_point] }
           implementation: scripts/smbClient/remove_target.sh
+    artifacts:
+      - commons: scripts/commons
+        type: tosca.artifacts.File          

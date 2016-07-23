@@ -1,42 +1,6 @@
 #!/bin/bash -e
 
-require_env () {
-  VAR_NAME=$1
-  if [ ! "${!VAR_NAME}" ]; then
-    echo "Required env var <$VAR_NAME> not found !" 
-    echo "Required env var <$VAR_NAME> not found !" >&2; exit 1;
-  else
-    echo "The value for required var <$VAR_NAME> is: ${!VAR_NAME}"
-  fi
-}
-
-require_envs () {
-  VAR_LIST=$1
-  IFS=',';
-  for VAR_NAME in $VAR_LIST;
-  do
-    require_env ${VAR_NAME}
-  done
-}
-
-# eval the config file and replace the listed env vars
-# will not work if VAR_NAME or VAR_VALUE contains '@' (but will if they contain '/' !)
-eval_conf_file () {
-  SRC_FILE=$1
-  DEST_FILE=$2
-  VAR_LIST=$3
-
-  sudo cp $SRC_FILE $DEST_FILE
-  if [ ! -z "$VAR_LIST" ]; then
-    for VAR_NAME in $(echo ${VAR_LIST} | tr ',' ' ')
-    do
-      VAR_VALUE="${!VAR_NAME}"
-      sudo sed -i -e "s@%${VAR_NAME}%@${VAR_VALUE}@g" $DEST_FILE
-    done
-  fi
-  echo "Content of $DEST_FILE"
-  sudo cat $DEST_FILE
-}
+source $commons/commons.sh
 
 require_envs "CONSUL_DATA_DIR,INSTANCE,CONSUL_BIND_ADDRESS"
 require_env "CONSUL_API_PORT"

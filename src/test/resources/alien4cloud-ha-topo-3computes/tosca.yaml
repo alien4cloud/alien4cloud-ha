@@ -1,17 +1,17 @@
-#tosca_definitions_version: alien_dsl_1_1_0
-tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
+tosca_definitions_version: alien_dsl_1_1_0
+#tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
 
 template_name: alien4cloud-ha-topo-3computes
 template_version: 1.0.0-SNAPSHOT
 template_author: Fastconnect
 
 imports:
-#  - "alien4cloud-ha-types:1.0.0-SNAPSHOT"
-#  - "tosca-normative-types:1.0.0-SNAPSHOT"
-#  - "jdk-type:1.0.0-SNAPSHOT"
- - tosca-normative-types:*
- - jdk-type:*
- - alien4cloud-ha-types:*
+  - "alien4cloud-ha-types:1.0.0-SNAPSHOT"
+  - "tosca-normative-types:1.0.0-SNAPSHOT"
+  - "jdk-type:1.0.0-SNAPSHOT"
+# - tosca-normative-types:*
+# - jdk-type:*
+# - alien4cloud-ha-types:*
 
 topology_template:
 
@@ -37,7 +37,7 @@ topology_template:
       required: true
       default: https
       constraints:
-        - valid_values: ["http", "https"]      
+        - valid_values: ["http", "https"]
     alien_data_dir:
       description: The location where A4C will store data on local FS.
       type: string
@@ -91,7 +91,7 @@ topology_template:
           properties:
             max_instances: 3
             min_instances: 3
-            default_instances: 3            
+            default_instances: 3
 
     # Others
     ConsulServer:
@@ -213,5 +213,3 @@ topology_template:
     #         relationship: alien4cloud.samba.relationships.ConnectsToSambaServer
     #         properties:
     #           mount_point: { get_input: alien_data_dir }
-
-
