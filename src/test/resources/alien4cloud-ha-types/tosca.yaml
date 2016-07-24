@@ -1,15 +1,15 @@
-#tosca_definitions_version: alien_dsl_1_1_0
-tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
+tosca_definitions_version: alien_dsl_1_1_0
+#tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
 
 template_name: alien4cloud-ha-types
 template_version: 1.0.0-SNAPSHOT
 template_author: Fastconnect
 
 imports:
-#  - "tosca-normative-types:1.0.0-SNAPSHOT"
-#  - "jdk-type:1.0.0-SNAPSHOT"
-  - tosca-normative-types:*
-  - jdk-type:*
+  - "tosca-normative-types:1.0.0-SNAPSHOT"
+  - "jdk-type:1.0.0-SNAPSHOT"
+#  - tosca-normative-types:*
+#  - jdk-type:*
 
 node_types:
 
@@ -298,7 +298,7 @@ node_types:
         constraints:
           - valid_values: ["http", "https"]
     attributes:
-      service_url: { concat: [get_property: [SELF, target_protocol], "://", get_attribute: [HOST, public_ip_address], ":", get_property: [SELF, listen_port]] }
+      service_url: { concat: [get_property: [SELF, front_protocol], "://", get_attribute: [HOST, public_ip_address], ":", get_property: [SELF, listen_port]] }
     interfaces:
       Standard:
         create:
@@ -568,4 +568,4 @@ relationship_types:
           implementation: scripts/smbClient/remove_target.sh
     artifacts:
       - commons: scripts/commons
-        type: tosca.artifacts.File          
+        type: tosca.artifacts.File

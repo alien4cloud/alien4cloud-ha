@@ -15,9 +15,9 @@ fi
 
 CONSUL_TMP_ZIP=/tmp/consul.zip
 download "consul" "${CONSUL_DOWNLOAD_URL}" ${CONSUL_TMP_ZIP}
-echo "Downloaded consul binary from ${CONSUL_DOWNLOAD_URL} to temporary destination ${CONSUL_TMP_ZIP}"
 
+echo "Unzipping consul package to /usr/local/bin"
 sudo unzip -o ${CONSUL_TMP_ZIP} -d /usr/local/bin
 echo "Unzipped consul package to /usr/local/bin"
 
-rm ${CONSUL_TMP_ZIP}
+sudo rm ${CONSUL_TMP_ZIP}

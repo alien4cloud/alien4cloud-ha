@@ -1,18 +1,22 @@
-#!/bin/bash 
+#!/bin/bash
 source $commons/commons.sh
 require_envs "AGENT_API_PORT AGENT_IP"
 # check dependencies
 require_bin "openssl keytool"
 
 # just a flag to know that we are connected to a consul agent
-mkdir -p /tmp/a4c/work/${SOURCE_NODE}/ConnectToConsulAgent
 echo "true" > /tmp/a4c/work/${SOURCE_NODE}/connectedToConsulAgent
+mkdir -p /tmp/a4c/work/${SOURCE_NODE}/ConnectToConsulAgent
 echo "${AGENT_API_PORT}" > /tmp/a4c/work/${SOURCE_NODE}/ConnectToConsulAgent/agentAPIPort
 echo "${AGENT_IP}" > /tmp/a4c/work/${SOURCE_NODE}/ConnectToConsulAgent/agentIp
+echo "${TLS_ENABLED}" > /tmp/a4c/work/${SOURCE_NODE}/ConnectToConsulAgent/TLSEnabled
 
 if [ "$TLS_ENABLED" != "true" ]; then
 	exit 0
 fi
+
+SOURCE_SSL_DIR="/tmp/a4c/work/${SOURCE_NODE}/ConnectToConsulAgent/ssl"
+mkdir -p "${SOURCE_SSL_DIR}"
 
 CURRENT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 echo "Currently in $CURRENT_DIR"
@@ -34,25 +38,26 @@ TEMP_DIR=`mktemp -d` && cd $TEMP_DIR
 echo "working in temporary directory $TEMP_DIR"
 
 echo "Generate client key"
-openssl genrsa -out $TEMP_DIR/client-key.pem 4096
-openssl req -subj "/CN=alien4cloud.org" -sha256 -new -key $TEMP_DIR/client-key.pem -out $TEMP_DIR/client.csr
+openssl genrsa -out ${SOURCE_SSL_DIR}/client-key.pem 4096
+openssl req -subj "/CN=alien4cloud.org" -sha256 -new -key ${SOURCE_SSL_DIR}/client-key.pem -out $TEMP_DIR/client.csr
+# Sign the key with the CA
 echo "[ ssl_client ]" > $TEMP_DIR/extfile.cnf
 echo "extendedKeyUsage=serverAuth,clientAuth" >> $TEMP_DIR/extfile.cnf
 openssl x509 -req -days 365 -sha256 \
         -in $TEMP_DIR/client.csr -CA $ssl/ca.pem -CAkey $ssl/ca-key.pem \
-        -CAcreateserial -out $TEMP_DIR/client-cert.pem \
+        -CAcreateserial -out ${SOURCE_SSL_DIR}/client-cert.pem \
         -passin pass:$CA_PASSPHRASE \
         -extfile $TEMP_DIR/extfile.cnf -extensions ssl_client
 
 # poulate key store
 echo "Generate client keystore using openssl"
 openssl pkcs12 -export -name alien4cloudClient \
-		-in $TEMP_DIR/client-cert.pem -inkey $TEMP_DIR/client-key.pem \
+		-in ${SOURCE_SSL_DIR}/client-cert.pem -inkey ${SOURCE_SSL_DIR}/client-key.pem \
 		-out $TEMP_DIR/client-keystore.p12 -chain \
 		-CAfile $ssl/ca.pem -caname root \
 		-password pass:$KEYSTORE_PWD
 
-#command -v keytool >/dev/null 2>&1 || { echo "============> I require keytool but it's not installed.  Aborting."; }
+
 
 echo "Using keytoool to generate a jks client keystore"
 keytool -importkeystore -destkeystore $TEMP_DIR/client-keystore.jks \

@@ -10,3 +10,4 @@ sudo mkdir -p /var/log/consul_template/
 
 download "consul-template" "${APPLICATION_URL}" /tmp/consul-template.zip
 sudo unzip /tmp/consul-template.zip -d /var/lib/consul_template/
+sudo rm /tmp/consul-template.zip

@@ -1,16 +1,22 @@
 #!/bin/bash -e
 
-echo "Loading commons (a quite good idea !)"
+echo "Loading commons"
 
+# Ensure that the last executed operation has been successfully executed, exit with error if not.
+#
+# args:
+# $1 operation description (just for logs).
 ensure_success() {
   if [ "$?" -ne 0 ]; then
     echo "The following operation failed ! Aborting : $1" >&2;
-    exit 1; 
+    exit 1;
   else
     echo "The following operation succeed: $1";
   fi
 }
 
+# Download the file using the available download command: wget or curl.
+#
 # args:
 # $1 download description.
 # $2 download link.
@@ -34,7 +40,7 @@ download() {
     LINK_FLAG="-O"
   else
     echo "Nor wget or curl is present, can't download anything, aborting !" >&2
-    exit 1    
+    exit 1
   fi
   echo "Downloading using command: $DOWNLOADER $Q_FLAG $O_FLAG $3 $LINK_FLAG $2"
   sudo $DOWNLOADER $Q_FLAG $O_FLAG $3 $LINK_FLAG $2 >/dev/null 2>&1
@@ -80,7 +86,7 @@ install_packages() {
     while true; do
       if mkdir "${LOCK}" &>/dev/null; then
         echo "take apt lock"
-        echo "$$>${LOCK}/pid"
+        #echo "$$>${LOCK}/pid"
         break;
       fi
       echo "waiting apt lock to be released..."
@@ -101,7 +107,10 @@ install_packages() {
   esac
 }
 
-# check that this env var is not empty
+# Check that this env var is not empty (and fail if it's empty).
+#
+# args:
+# $1 the env var name
 require_env () {
   VAR_NAME=$1
   if [ ! "${!VAR_NAME}" ]; then
@@ -112,17 +121,26 @@ require_env () {
   fi
 }
 
-# check that the csv list of env vars are not empty
+# Check that the csv list of env vars are not empty (fail if one is empty).
+#
+# args:
+# $1 comma or space separated list of env variable names
 require_envs () {
   VAR_LIST=$1
-  for VAR_NAME in $(echo ${VAR_LIST} | tr ',' ' ') 
+  for VAR_NAME in $(echo ${VAR_LIST} | tr ',' ' ')
   do
     require_env ${VAR_NAME}
   done
 }
 
-# eval the config file and replace the listed env vars
-# will not work if VAR_NAME or VAR_VALUE contains '@' (but will if they contain '/' !)
+# Eval the config file and replace the listed env vars.
+# Variables are expected to apear in mode %VAR_NAME% in source file.
+# It will not work if VAR_NAME or VAR_VALUE contains '@' (but will if they contain '/' !)
+#
+# args:
+# $1 the source file location
+# $2 the destination file location
+# $1 the list of environment variable to replace
 eval_conf_file () {
   SRC_FILE=$1
   DEST_FILE=$2
@@ -140,7 +158,10 @@ eval_conf_file () {
   sudo cat $DEST_FILE
 }
 
-# check dependencies (list of dependencies)
+# Ensure that the list of binaries are found on the system, fail if on is not found.
+#
+# args:
+# $1 space separated list of binaries
 require_bin () {
   BIN_LIST=$*
   for BIN_NAME in ${BIN_LIST};
@@ -154,6 +175,11 @@ require_bin () {
   done
 }
 
+# Ensure that the list of dependency packages are found on the system,
+# Install those that are not found using the right package manager (apt-get or yum).
+#
+# args:
+# $1 space separated list of packages
 install_dependencies() {
   PACKAGE_NAMES=$*
   PACKAGES_TO_INSTALL=""
@@ -169,12 +195,9 @@ install_dependencies() {
   if [ "${PACKAGES_TO_INSTALL}" ]; then
     echo "I finally will install: ${PACKAGES_TO_INSTALL}"
     install_packages ${PACKAGES_TO_INSTALL}
-  else 
+  else
     echo "Nothing to install so far !"
   fi
 }
-
-
-
 
 echo "commons loaded"

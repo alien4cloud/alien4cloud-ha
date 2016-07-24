@@ -39,8 +39,8 @@ if [ "$SERVER_PROTOCOL" == "https" ]; then
     -in $TEMP_DIR/server.csr -CA $ssl/ca.pem -CAkey $ssl/ca-key.pem \
     -CAcreateserial -out $TEMP_DIR/server-cert.pem \
     -passin pass:${CA_PASSPHRASE} \
-    -extfile $TEMP_DIR/extfile.cnf 
-  
+    -extfile $TEMP_DIR/extfile.cnf
+
   # poulate key store
   sudo openssl pkcs12 -export -name alien4cloudClient \
     -in $TEMP_DIR/server-cert.pem -inkey $TEMP_DIR/server-key.pem \
@@ -79,7 +79,7 @@ cluster_name=$(</tmp/a4c/work/${NODE}/cluster_name)
 echo "The ElasticSearch cluster is: ${cluster_name}"
 # replace the cluster name in alien config
 sudo sed -i -e "s/clusterName\: \(.*\)/clusterName\: $cluster_name/g" ${A4C_CONFIG}
-sudo echo "cluster.name: ${cluster_name}" > /etc/alien4cloud/elasticsearch.yml
+sudo bash -c 'echo "cluster.name: ${cluster_name}" > /etc/alien4cloud/elasticsearch.yml'
 
 ## FIXME: enabling the HA should not be related to the number of A4C instances ...
 ## ... but instead to the fact that we are actually connected to consul

@@ -1,4 +1,7 @@
 #!/bin/bash -e
+source $commons/commons.sh
+
+require_envs "SERVER_PROTOCOL ALIEN_PORT"
 
 ALIEN_URL="${SERVER_PROTOCOL}://localhost:${ALIEN_PORT}/rest/latest/health/check"
 
