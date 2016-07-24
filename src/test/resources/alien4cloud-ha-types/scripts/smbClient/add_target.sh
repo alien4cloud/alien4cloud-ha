@@ -1,4 +1,7 @@
 #!/bin/bash -e
+source $commons/commons.sh
+
+require_envs "MOUNT_POINT SAMBA_SERVER_IP SHARE_NAME"
 
 ## create the mounted point
 sudo mkdir -p $MOUNT_POINT

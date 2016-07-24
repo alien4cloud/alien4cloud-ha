@@ -1,7 +1,7 @@
 #!/bin/bash -e
 source $commons/commons.sh
-require_bin openssl
-require_envs "LISTEN_PORT SERVICE_PORT SERVER_NAME FRONT_PROTOCOL TLS_ENABLED"
+require_bin "openssl"
+require_envs "LISTEN_PORT SERVER_NAME FRONT_PROTOCOL TARGET_PROTOCOL TLS_ENABLED"
 
 CONF_PATH="/etc/consul_template"
 
@@ -13,9 +13,9 @@ if [ "$FRONT_PROTOCOL" == "https" ]; then
 fi
 
 sudo sed -i -e "s/%LISTEN_PORT%/${LISTEN_PORT}/g" $TEMPLATE_PATH
-sudo sed -i -e "s/%SERVICE_PORT%/${SERVICE_PORT}/g" $TEMPLATE_PATH
 sudo sed -i -e "s/%SERVER_NAME%/${SERVER_NAME}/g" $TEMPLATE_PATH
 sudo sed -i -e "s/%FRONT_PROTOCOL%/${FRONT_PROTOCOL}/g" $TEMPLATE_PATH
+sudo sed -i -e "s/%TARGET_PROTOCOL%/${TARGET_PROTOCOL}/g" $TEMPLATE_PATH
 
 # generate certificates if TLS is enabled
 if [ "$TLS_ENABLED" == "true" ]; then

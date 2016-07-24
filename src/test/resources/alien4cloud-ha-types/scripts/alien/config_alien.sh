@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/bin/bash -e
+source $commons/commons.sh
+
+require_envs "DATA_DIR SERVER_PROTOCOL ALIEN_PORT"
 
 A4C_CONFIG="/etc/alien4cloud/alien4cloud-config.yml"
 
@@ -91,6 +94,8 @@ if [ "${CONNECTED_TO_CONSUL}" == "true" ]; then
   sudo sed -i -e "s/#\(.*\)consulAgentPort\: \(.*\)/consulAgentPort\: ${AGENT_API_PORT}/g" ${A4C_CONFIG}
 
   if [ "$TLS_ENABLED" == "true" ]; then
+      # FIXME: for the moment the securised client agent only listen on 127.0.0.1
+      sudo sed -i -e "s/consulAgentIp\: \(.*\)/consulAgentIp\: 127.0.0.1/g" ${A4C_CONFIG}
       sudo sed -i -e "s/consul_tls_enabled\: \(.*\)/consul_tls_enabled\: true/g" ${A4C_CONFIG}
       sudo sed -i -e "s@keyStorePath\: \(.*\)@keyStorePath\: $KEY_STORE_PATH@g" ${A4C_CONFIG}
       sudo sed -i -e "s@trustStorePath\: \(.*\)@trustStorePath\: $TRUST_STORE_PATH@g" ${A4C_CONFIG}

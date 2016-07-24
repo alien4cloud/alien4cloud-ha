@@ -1,17 +1,17 @@
-tosca_definitions_version: alien_dsl_1_1_0
-#tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
+#tosca_definitions_version: alien_dsl_1_1_0
+tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
 
 template_name: alien4cloud-ha-topo-3computes
 template_version: 1.0.0-SNAPSHOT
 template_author: Fastconnect
 
 imports:
-  - "alien4cloud-ha-types:1.0.0-SNAPSHOT"
-  - "tosca-normative-types:1.0.0-SNAPSHOT"
-  - "jdk-type:1.0.0-SNAPSHOT"
-# - tosca-normative-types:*
-# - jdk-type:*
-# - alien4cloud-ha-types:*
+#  - "alien4cloud-ha-types:1.0.0-SNAPSHOT"
+#  - "tosca-normative-types:1.0.0-SNAPSHOT"
+#  - "jdk-type:1.0.0-SNAPSHOT"
+ - tosca-normative-types:*
+ - jdk-type:*
+ - alien4cloud-ha-types:*
 
 topology_template:
 
@@ -48,6 +48,11 @@ topology_template:
       type: boolean
       required: false
       default: true
+    consul_api_port:
+      description: The port where consul will listen for API (HTTP or HTTPS).
+      type: integer
+      required: false
+      default: 8555
     ssl_ca_passphrase:
       description: The passphrase for the CA certificate.
       type: string
@@ -100,6 +105,10 @@ topology_template:
         tls_enabled: { get_input: consul_tls_enabled }
         ca_passphrase: { get_input: ssl_ca_passphrase }
         encrypt_key: { get_input: consul_gossip_encrypt_key }
+      capabilities:
+        consul_agent: 
+          properties:
+            api_port: { get_input: consul_api_port }
       requirements:
         - host: BackendCompute
     ConsulClient:
@@ -108,9 +117,26 @@ topology_template:
         tls_enabled: { get_input: consul_tls_enabled }
         ca_passphrase: { get_input: ssl_ca_passphrase }
         encrypt_key: { get_input: consul_gossip_encrypt_key }
+      capabilities:
+        consul_agent: 
+          properties:
+            api_port: { get_input: consul_api_port }
       requirements:
         - host: FrontCompute
         - consul_server: ConsulServer
+    AlienConsulClient:
+      type: alien4cloud.consul.nodes.ConsulClient
+      properties:
+        tls_enabled: { get_input: consul_tls_enabled }
+        ca_passphrase: { get_input: ssl_ca_passphrase }
+        encrypt_key: { get_input: consul_gossip_encrypt_key }
+      capabilities:
+        consul_agent: 
+          properties:
+            api_port: { get_input: consul_api_port }        
+      requirements:
+        - host: AlienCompute
+        - consul_server: ConsulServer        
     ReverseProxy:
       type: alien.ha.types.Nginx
       properties:
@@ -127,6 +153,7 @@ topology_template:
         tls_enabled: { get_input: consul_tls_enabled }
         ca_passphrase: { get_input: ssl_ca_passphrase }
         target_protocol: { get_input: alien_protocol }
+        front_protocol: { get_input: front_protocol }
       requirements:
         - host: FrontCompute
         - dependency:
@@ -179,7 +206,7 @@ topology_template:
             capability: alien.capabilities.ElasticSearch
             relationship: alien4cloud.relationships.ConnectToElasticSearch
         - consul:
-            node: ConsulClient
+            node: AlienConsulClient
             capability: alien4cloud.consul.capabilities.ConsulAgent
             relationship: alien4cloud.consul.relationships.ConnectToConsulAgent
         # - dependency:

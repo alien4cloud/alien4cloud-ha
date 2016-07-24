@@ -1,4 +1,7 @@
 #!/bin/bash -e
+source $commons/commons.sh
+
+require_envs "SHARE_PATH SHARE_NAME"
 
 ## create the shared path
 sudo mkdir -p $SHARE_PATH

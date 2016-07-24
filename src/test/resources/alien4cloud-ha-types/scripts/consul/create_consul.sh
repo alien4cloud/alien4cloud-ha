@@ -1,6 +1,7 @@
 #!/bin/bash -e
 source $commons/commons.sh
-install_dependencies unzip
+install_dependencies "unzip"
+require_envs "CONSUL_DOWNLOAD_URL"
 
 if [ ! -d "/etc/consul/ssl" ]; then
   sudo mkdir -p /etc/consul/ssl
@@ -13,9 +14,7 @@ if [ ! -d "$CONSUL_DATA_DIR" ]; then
 fi
 
 CONSUL_TMP_ZIP=/tmp/consul.zip
-
-# TODO: use a funtion
-curl -Lo ${CONSUL_TMP_ZIP} -O ${CONSUL_DOWNLOAD_URL}
+download "consul" "${CONSUL_DOWNLOAD_URL}" ${CONSUL_TMP_ZIP}
 echo "Downloaded consul binary from ${CONSUL_DOWNLOAD_URL} to temporary destination ${CONSUL_TMP_ZIP}"
 
 sudo unzip -o ${CONSUL_TMP_ZIP} -d /usr/local/bin

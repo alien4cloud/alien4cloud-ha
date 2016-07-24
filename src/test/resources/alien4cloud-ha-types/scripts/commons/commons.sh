@@ -1,5 +1,46 @@
 #!/bin/bash -e
 
+echo "Loading commons (a quite good idea !)"
+
+ensure_success() {
+  if [ "$?" -ne 0 ]; then
+    echo "The following operation failed ! Aborting : $1" >&2;
+    exit 1; 
+  else
+    echo "The following operation succeed: $1";
+  fi
+}
+
+# args:
+# $1 download description.
+# $2 download link.
+# $3 output file.
+download() {
+  echo "Will download $1 from $2 into $3"
+
+  if [ -f /usr/bin/wget ]; then
+    DOWNLOADER="wget"
+  elif [ -f /usr/bin/curl ]; then
+    DOWNLOADER="curl"
+  fi
+
+  if [ "$DOWNLOADER" = "wget" ];then
+    Q_FLAG="--no-check-certificate -q"
+    O_FLAG="-O"
+    LINK_FLAG=""
+  elif [ "$DOWNLOADER" = "curl" ];then
+    Q_FLAG="-ks"
+    O_FLAG="-Lo"
+    LINK_FLAG="-O"
+  else
+    echo "Nor wget or curl is present, can't download anything, aborting !" >&2
+    exit 1    
+  fi
+  echo "Downloading using command: $DOWNLOADER $Q_FLAG $O_FLAG $3 $LINK_FLAG $2"
+  sudo $DOWNLOADER $Q_FLAG $O_FLAG $3 $LINK_FLAG $2 >/dev/null 2>&1
+  ensure_success "Downloading using command: $DOWNLOADER $Q_FLAG $O_FLAG $3 $LINK_FLAG $2"
+}
+
 # Try to guess the Operating System distribution
 # The guessing algorithm is:
 #   1- use lsb_release retrieve the distribution name (should normally be present it's listed as requirement of VM images in installation guide)
@@ -60,22 +101,21 @@ install_packages() {
   esac
 }
 
-// check that this env var is not empty
+# check that this env var is not empty
 require_env () {
   VAR_NAME=$1
   if [ ! "${!VAR_NAME}" ]; then
-    echo "Required env var <$VAR_NAME> not found !"
-    echo "Required env var <$VAR_NAME> not found !" >&2; exit 1;
+    echo "Required env var <$VAR_NAME> not found ! Aborting" >&2
+    exit 1
   else
     echo "The value for required var <$VAR_NAME> is: ${!VAR_NAME}"
   fi
 }
 
-// check that the csv list of env vars are not empty
+# check that the csv list of env vars are not empty
 require_envs () {
   VAR_LIST=$1
-  IFS=',';
-  for VAR_NAME in $VAR_LIST;
+  for VAR_NAME in $(echo ${VAR_LIST} | tr ',' ' ') 
   do
     require_env ${VAR_NAME}
   done
@@ -102,29 +142,39 @@ eval_conf_file () {
 
 # check dependencies (list of dependencies)
 require_bin () {
-  BIN_LIST=$1
-  IFS=',';
-  for BIN_NAME in $BIN_LIST;
+  BIN_LIST=$*
+  for BIN_NAME in ${BIN_LIST};
   do
-    command -v ${BIN_NAME} >/dev/null 2>&1 || { echo "I require <${BIN_NAME}> but it's not installed.  Aborting." >&2; exit 1; }
+    if ! [ -x "$(command -v ${BIN_NAME})" ]; then
+      echo "${BIN_NAME} is not installed." >&2
+      exit 1
+    else
+      echo "${BIN_NAME} is installed"
+    fi
   done
 }
 
 install_dependencies() {
-  PACKAGE_NAMES=$1
+  PACKAGE_NAMES=$*
   PACKAGES_TO_INSTALL=""
-  IFS=',';
-  for PACKAGE_NAME in $PACKAGE_NAMES;
+  for BIN_NAME in ${PACKAGE_NAMES};
   do
-    if [ command -v ${BIN_NAME} >/dev/null 2>&1 ]; then
-      echo "${BIN_NAME} was found, will not install it"
-    else
+    if ! [ -x "$(command -v ${BIN_NAME})" ]; then
       echo "${BIN_NAME} was not found, I will install it"
       PACKAGES_TO_INSTALL="${PACKAGES_TO_INSTALL} ${BIN_NAME}"
+    else
+      echo "${BIN_NAME} was found, will not install it"
     fi
   done
-  if [ ! "${PACKAGES_TO_INSTALL}" ]; then
+  if [ "${PACKAGES_TO_INSTALL}" ]; then
     echo "I finally will install: ${PACKAGES_TO_INSTALL}"
     install_packages ${PACKAGES_TO_INSTALL}
+  else 
+    echo "Nothing to install so far !"
   fi
 }
+
+
+
+
+echo "commons loaded"

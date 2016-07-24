@@ -1,9 +1,9 @@
 #!/bin/bash -e
-
 source $commons/commons.sh
 
-require_envs "CONSUL_DATA_DIR,INSTANCE,CONSUL_BIND_ADDRESS"
-require_env "CONSUL_API_PORT"
+require_envs "CONSUL_DATA_DIR,INSTANCE,CONSUL_BIND_ADDRESS,CONSUL_API_PORT"
+
+echo "Starting consul agent on ${CONSUL_BIND_ADDRESS}"
 
 # evaluate and put the basic config
 eval_conf_file $configs/basic_config.json /etc/consul/01_basic_config.json "CONSUL_DATA_DIR,INSTANCE,CONSUL_BIND_ADDRESS,CONSUL_API_PORT"

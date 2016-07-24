@@ -1,6 +1,6 @@
 #!/bin/bash -e
 source $commons/commons.sh
-require_envs "LISTEN_PORT SERVICE_PORT SERVER_NAME CA_PASSPHRASE TARGET_PROTOCOL FRONT_PROTOCOL"
+require_envs "LISTEN_PORT SERVER_NAME TARGET_PROTOCOL FRONT_PROTOCOL"
 
 # replace the default web site
 sudo cp -f $config/index.html /usr/share/nginx/html/
@@ -8,6 +8,8 @@ sudo cp -f $config/alien4cloud-logo.png /usr/share/nginx/html/
 
 if [ "$TARGET_PROTOCOL" == "https" -o "$FRONT_PROTOCOL" == "https" ]; then
   echo "activating SSL on reverse proxy"
+  require_envs "CA_PASSPHRASE"
+
   sudo cp -f $config/nginx.ssl /etc/nginx/sites-enabled/default
 
   SSL_DIR=/etc/nginx/ssl
@@ -30,5 +32,4 @@ else
 fi
 
 sudo sed -i -e "s/%LISTEN_PORT%/${LISTEN_PORT}/g" /etc/nginx/sites-enabled/default
-sudo sed -i -e "s/%SERVICE_PORT%/${SERVICE_PORT}/g" /etc/nginx/sites-enabled/default
 sudo sed -i -e "s/%SERVER_NAME%/${SERVER_NAME}/g" /etc/nginx/sites-enabled/default

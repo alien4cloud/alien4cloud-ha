@@ -1,7 +1,7 @@
 #!/bin/bash -e
+source $commons/commons.sh
 
 echo "Installing Alien4Cloud"
-
 
 # Try to guess the Operating System distribution
 # The guessing algorithm is:
