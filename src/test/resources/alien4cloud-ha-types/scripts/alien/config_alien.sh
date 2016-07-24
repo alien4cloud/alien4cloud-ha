@@ -5,6 +5,13 @@ require_envs "DATA_DIR SERVER_PROTOCOL ALIEN_PORT"
 
 A4C_CONFIG="/etc/alien4cloud/alien4cloud-config.yml"
 
+CONNECTED_TO_CONSUL="false"
+if [ ! -d "/tmp/a4c/work/${NODE}/ConnectToConsulAgent" ]; then
+  CONNECTED_TO_CONSUL="true"
+  AGENT_API_PORT=$(</tmp/a4c/work/${NODE}/ConnectToConsulAgent/agentAPIPort)
+  AGENT_IP=$(</tmp/a4c/work/${NODE}/ConnectToConsulAgent/agentIp)
+fi
+
 # replace the alien data dir
 echo "A4C data dir is ${DATA_DIR}"
 sudo sed -i -e "s@alien\: \(.*\)@alien\: ${DATA_DIR}@g" ${A4C_CONFIG}
