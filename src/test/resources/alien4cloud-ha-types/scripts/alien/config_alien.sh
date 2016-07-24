@@ -5,10 +5,6 @@ require_envs "DATA_DIR SERVER_PROTOCOL ALIEN_PORT"
 
 A4C_CONFIG="/etc/alien4cloud/alien4cloud-config.yml"
 
-CONNECTED_TO_CONSUL=$(</tmp/a4c/work/${NODE}/connectedToConsulAgent)
-AGENT_API_PORT=$(</tmp/a4c/work/${NODE}/ConnectToConsulAgent/agentAPIPort)
-AGENT_IP=$(</tmp/a4c/work/${NODE}/ConnectToConsulAgent/agentIp)
-
 # replace the alien data dir
 echo "A4C data dir is ${DATA_DIR}"
 sudo sed -i -e "s@alien\: \(.*\)@alien\: ${DATA_DIR}@g" ${A4C_CONFIG}
@@ -29,7 +25,7 @@ if [ "$SERVER_PROTOCOL" == "https" ]; then
   sudo mkdir -p $AC4_SSL_DIR
 
   TEMP_DIR=`mktemp -d`
-
+  # TODO: use commons ssl
   # Generate a keypair for the server or client, and sign it with the CA
   sudo openssl genrsa -out $TEMP_DIR/server-key.pem 4096
   sudo openssl req -subj "/CN=alien4cloud.org" -sha256 -new -key $TEMP_DIR/server-key.pem -out $TEMP_DIR/server.csr
@@ -85,21 +81,46 @@ sudo bash -c 'echo "cluster.name: ${cluster_name}" > /etc/alien4cloud/elasticsea
 ## ... but instead to the fact that we are actually connected to consul
 #number_of_instances=$(echo ${INSTANCES} | tr ',' ' ' | wc -w)
 # enable HA if A4C is connected to a Consul agent
-if [ "${CONNECTED_TO_CONSUL}" == "true" ]; then
-  echo "A4C is connected to Consul, activate HA"
+if [ -d "/tmp/a4c/work/${NODE}/ConnectToConsulAgent" ]; then
+  AGENT_API_PORT=$(</tmp/a4c/work/${NODE}/ConnectToConsulAgent/agentAPIPort)
+  AGENT_IP=$(</tmp/a4c/work/${NODE}/ConnectToConsulAgent/agentIp)
+
+  echo "A4C is connected to Consul ${AGENT_IP}:{AGENT_API_PORT}, activate HA"
   sudo sed -i -e "s/ha_enabled\: \(.*\)/ha_enabled\: true/g" ${A4C_CONFIG}
   sudo sed -i -e "s/consulAgentIp\: \(.*\)/consulAgentIp\: ${AGENT_IP}/g" ${A4C_CONFIG}
   sudo sed -i -e "s/consulAgentPort\: \(.*\)/consulAgentPort\: ${AGENT_API_PORT}/g" ${A4C_CONFIG}
   sudo sed -i -e "s/#\(.*\)consulAgentIp\: \(.*\)/consulAgentIp\: ${AGENT_IP}/g" ${A4C_CONFIG}
   sudo sed -i -e "s/#\(.*\)consulAgentPort\: \(.*\)/consulAgentPort\: ${AGENT_API_PORT}/g" ${A4C_CONFIG}
 
+  TLS_ENABLED=$(</tmp/a4c/work/${NODE}/ConnectToConsulAgent/TLSEnabled)
   if [ "$TLS_ENABLED" == "true" ]; then
+
+      require_bin "keytool"
+
+      SSL_STORE_PATH="/etc/alien4cloud/consul/ssl"
+      sudo mkdir -p $SSL_STORE_PATH
+      SSL_DIR="/tmp/a4c/work/${NODE}/ConnectToConsulAgent/ssl"
+
+      KEY_ALIAS=$(</tmp/a4c/work/${NODE}/ConnectToConsulAgent/alias)
+      STORE_PWD=$(</tmp/a4c/work/${NODE}/ConnectToConsulAgent/storePwd)
+
+      # here we need to create java compliant keystores ...
+      echo "Using keytoool to generate a jks client keystore"
+      sudo keytool -importkeystore -destkeystore $SSL_STORE_PATH/client-keystore.jks \
+          -srckeystore $SSL_DIR/$KEY_ALIAS-keystore.p12 -srcstoretype pkcs12 \
+          -alias ${KEY_ALIAS} -deststorepass "${STORE_PWD}" \
+          -srckeypass "${STORE_PWD}" -srcstorepass "${STORE_PWD}" 2>&1
+      ensure_success "Using keytoool to generate a jks client keystore"
+
+      sudo keytool -import -alias ${KEY_ALIAS} -keystore $SSL_STORE_PATH/truststore.jks \
+          -file $SSL_DIR/ca.csr -storepass "${STORE_PWD}" -noprompt
+
       # FIXME: for the moment the securised client agent only listen on 127.0.0.1
       sudo sed -i -e "s/consulAgentIp\: \(.*\)/consulAgentIp\: 127.0.0.1/g" ${A4C_CONFIG}
       sudo sed -i -e "s/consul_tls_enabled\: \(.*\)/consul_tls_enabled\: true/g" ${A4C_CONFIG}
-      sudo sed -i -e "s@keyStorePath\: \(.*\)@keyStorePath\: $KEY_STORE_PATH@g" ${A4C_CONFIG}
-      sudo sed -i -e "s@trustStorePath\: \(.*\)@trustStorePath\: $TRUST_STORE_PATH@g" ${A4C_CONFIG}
-      sudo sed -i -e "s/keyStoresPwd\: \(.*\)/keyStoresPwd\: $KEYSTORE_PWD/g" ${A4C_CONFIG}
+      sudo sed -i -e "s@keyStorePath\: \(.*\)@keyStorePath\: $SSL_STORE_PATH/client-keystore.jks@g" ${A4C_CONFIG}
+      sudo sed -i -e "s@trustStorePath\: \(.*\)@trustStorePath\: $SSL_STORE_PATH/truststore.jks@g" ${A4C_CONFIG}
+      sudo sed -i -e "s/keyStoresPwd\: \(.*\)/keyStoresPwd\: changeit/g" ${A4C_CONFIG}
   else
       sudo sed -i -e "s/consul_tls_enabled\: \(.*\)/consul_tls_enabled\: false/g" ${A4C_CONFIG}
   fi

@@ -1,5 +1,6 @@
 #!/bin/bash -e
 source $commons/commons.sh
+source $commons/ssl.sh
 
 require_envs "CONSUL_DATA_DIR,INSTANCE,CONSUL_BIND_ADDRESS,CONSUL_API_PORT"
 
@@ -25,6 +26,7 @@ if [ "$TLS_ENABLED" == "true" ]; then
 	# evaluate and put the secured config
   eval_conf_file $configs/${CONSUL_AGENT_MODE}_secured_config.json /etc/consul/04_${CONSUL_AGENT_MODE}_secured_config.json "CONSUL_API_PORT"
 
+  # TODO: use commons ssl 
 	SSL_REPO=/etc/consul/ssl
 	# Generate a keypair for the server or client, and sign it with the CA
 	sudo cp $ssl/ca.pem $SSL_REPO/ca.pem

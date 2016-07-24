@@ -114,7 +114,9 @@ install_packages() {
 require_env () {
   VAR_NAME=$1
   if [ ! "${!VAR_NAME}" ]; then
+    echo "==========================================================" >&2
     echo "Required env var <$VAR_NAME> not found ! Aborting" >&2
+    echo "==========================================================" >&2
     exit 1
   else
     echo "The value for required var <$VAR_NAME> is: ${!VAR_NAME}"
@@ -167,7 +169,9 @@ require_bin () {
   for BIN_NAME in ${BIN_LIST};
   do
     if ! [ -x "$(command -v ${BIN_NAME})" ]; then
+      echo "==========================================================" >&2
       echo "${BIN_NAME} is not installed." >&2
+      echo "==========================================================" >&2
       exit 1
     else
       echo "${BIN_NAME} is installed"

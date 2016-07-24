@@ -87,16 +87,16 @@ topology_template:
         scalable:
           properties:
             max_instances: 10
-            min_instances: 2
-            default_instances: 2
+            min_instances: 1
+            default_instances: 1
     BackendCompute:
       type: tosca.nodes.Compute
       capabilities:
         scalable:
           properties:
             max_instances: 3
-            min_instances: 3
-            default_instances: 3
+            min_instances: 1
+            default_instances: 1
 
     # Others
     ConsulServer:
@@ -150,16 +150,21 @@ topology_template:
       type: alien.ha.types.ConsulTemplate4Nginx
       properties:
         listen_port: { get_input: rproxy_port }
-        tls_enabled: { get_input: consul_tls_enabled }
-        ca_passphrase: { get_input: ssl_ca_passphrase }
+        # tls_enabled: { get_input: consul_tls_enabled }
+        # ca_passphrase: { get_input: ssl_ca_passphrase 
         target_protocol: { get_input: alien_protocol }
         front_protocol: { get_input: front_protocol }
+      capabilities:
+        consul:
+          properties:
+            tls_enabled: { get_input: consul_tls_enabled }
+            ca_passphrase: { get_input: ssl_ca_passphrase }        
       requirements:
         - host: FrontCompute
-        - dependency:
+        - consul:
             node: ConsulClient
-            capability: tosca.capabilities.Node
-            relationship: tosca.relationships.DependsOn
+            capability: alien4cloud.consul.capabilities.ConsulAgent
+            relationship: alien4cloud.consul.relationships.ConnectToConsulAgent            
         - dependency:
             node: ReverseProxy
             capability: tosca.capabilities.Node
@@ -192,10 +197,10 @@ topology_template:
           properties:
             tls_enabled: { get_input: consul_tls_enabled }
             ca_passphrase: { get_input: ssl_ca_passphrase }
-            keystore_pwd: "k3ySt0r3Pwd"
-            key_pwd: "k3yPwd"
-            key_store_path: "/etc/alien4cloud/ssl/client-keystore.jks"
-            trust_store_path: "/etc/alien4cloud/ssl/truststore.jks"
+            # keystore_pwd: "k3ySt0r3Pwd"
+            # key_pwd: "k3yPwd"
+            # key_store_path: "/etc/alien4cloud/ssl/client-keystore.jks"
+            # trust_store_path: "/etc/alien4cloud/ssl/truststore.jks"
       requirements:
         - java:
             node: AlienJDK

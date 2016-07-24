@@ -223,6 +223,7 @@ node_types:
     capabilities:
       consul:
         type: alien4cloud.consul.capabilities.ConsulClient
+
       elasticsearch:
         type: alien.capabilities.ElasticSearchClient
     requirements:
@@ -329,6 +330,14 @@ node_types:
       used for example to update reverse proxy config and reload it.
     tags:
       icon: /images/consul_template.png
+    capabilities:
+      consul:
+        type: alien4cloud.consul.capabilities.ConsulClient
+    requirements:
+      - consul: alien4cloud.consul.capabilities.ConsulAgent
+        type: alien4cloud.consul.relationships.ConnectToConsulAgent
+        lower_bound: 1
+        upper_bound: 1        
     properties:
       download_url:
         type: string
@@ -338,15 +347,15 @@ node_types:
         type: integer
         required: true
         default: 8080
-      tls_enabled:
-        description: define if the agent will be secured
-        type: boolean
-        required: true
-        default: false
-      ca_passphrase:
-        description: the provided CA cert passphrase
-        type: string
-        required: false
+      # tls_enabled:
+      #   description: define if the agent will be secured
+      #   type: boolean
+      #   required: true
+      #   default: false
+      # ca_passphrase:
+      #   description: the provided CA cert passphrase
+      #   type: string
+      #   required: false
       front_protocol:
         type: string
         required: true
@@ -369,8 +378,8 @@ node_types:
           inputs:
             LISTEN_PORT: { get_property: [SELF, listen_port] }
             SERVER_NAME: { get_attribute: [HOST, public_ip_address] }
-            TLS_ENABLED: { get_property: [SELF, tls_enabled] }
-            CA_PASSPHRASE: { get_property: [SELF, ca_passphrase] }
+            TLS_ENABLED: { get_property: [SELF, consul, tls_enabled] }
+            CA_PASSPHRASE: { get_property: [SELF, consul, ca_passphrase] }
             TARGET_PROTOCOL: { get_property: [SELF, target_protocol] }
             FRONT_PROTOCOL: { get_property: [SELF, front_protocol] }
           implementation: scripts/consul_template/configure.sh
@@ -461,22 +470,22 @@ capability_types:
         type: string
         description: the passphrase for the CA certificate
         required: false
-      key_store_path:
-        type: string
-        description: the location of the key store
-        required: false
-      trust_store_path:
-        type: string
-        description: the location of the trust store
-        required: false
-      keystore_pwd:
-        type: string
-        description: the password for the key store
-        required: false
-      key_pwd:
-        type: string
-        description: the password for the key
-        required: false
+      # key_store_path:
+      #   type: string
+      #   description: the location of the key store
+      #   required: false
+      # trust_store_path:
+      #   type: string
+      #   description: the location of the trust store
+      #   required: false
+      # keystore_pwd:
+      #   type: string
+      #   description: the password for the key store
+      #   required: false
+      # key_pwd:
+      #   type: string
+      #   description: the password for the key
+      #   required: false
   alien4cloud.consul.capabilities.ConsulServer:
     derived_from: tosca.capabilities.Root
     description: >
@@ -521,9 +530,9 @@ relationship_types:
             # TOSCA limitation ?
             TLS_ENABLED: { get_property: [SOURCE, consul, tls_enabled] }
             CA_PASSPHRASE: { get_property: [SOURCE, consul, ca_passphrase] }
-            KEY_STORE_PATH: { get_property: [SOURCE, consul, key_store_path] }
-            TRUST_STORE_PATH: { get_property: [SOURCE, consul, trust_store_path] }
-            KEYSTORE_PWD: { get_property: [SOURCE, consul, keystore_pwd] }
+            # KEY_STORE_PATH: { get_property: [SOURCE, consul, key_store_path] }
+            # TRUST_STORE_PATH: { get_property: [SOURCE, consul, trust_store_path] }
+            # KEYSTORE_PWD: { get_property: [SOURCE, consul, keystore_pwd] }
             AGENT_IP: { get_attribute: [TARGET, ip_address] }
             AGENT_API_PORT: { get_property: [TARGET, consul_agent, api_port] }
           implementation: scripts/ConnectToConsulAgent/pre_configure_source.sh
