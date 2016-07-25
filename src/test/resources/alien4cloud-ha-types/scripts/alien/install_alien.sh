@@ -57,6 +57,8 @@ sudo chown -R alien4cloud:alien4cloud /etc/alien4cloud
 # add init script and start service
 echo "Preparing services"
 sudo bash -c "sed -e 's/\\\${APP_ARGS}/${APP_ARGS}/' $bin/alien.sh > /etc/init.d/alien"
+sudo bash -c "sed -i -e 's/\\\${JVM_ARGS}/${JVM_ARGS}/' /etc/init.d/alien"
+
 sudo chmod +x /etc/init.d/alien
 
 sudo update-rc.d alien defaults 95 10

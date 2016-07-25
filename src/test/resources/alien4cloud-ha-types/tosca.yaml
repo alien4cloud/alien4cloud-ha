@@ -193,6 +193,11 @@ node_types:
         type: string
         required: false
         default: ""
+      jvm_args:
+        description: These args will be used as JVM arguments.
+        type: string
+        required: false
+        default: ""
       listen_port:
         description: The port on which A4C will listen.
         type: integer
@@ -237,6 +242,7 @@ node_types:
           inputs:
             APPLICATION_URL: { get_property: [SELF, alien_url] }
             APP_ARGS: { get_property: [SELF, app_args] }
+            JVM_ARGS: { get_property: [SELF, jvm_args] }
             ALIEN_VERSION: { get_property: [SELF, alien_version] }
             DATA_DIR: { get_property: [SELF, data_dir] }
           implementation: scripts/alien/install_alien.sh
@@ -333,7 +339,7 @@ node_types:
       - consul: alien4cloud.consul.capabilities.ConsulAgent
         type: alien4cloud.consul.relationships.ConnectToConsulAgent
         lower_bound: 1
-        upper_bound: 1        
+        upper_bound: 1
     properties:
       download_url:
         type: string
