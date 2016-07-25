@@ -14,12 +14,12 @@ echo "Loading ssl utils"
 # - $3 KEYSTORE_PWD
 # - $4 single IP to be put in subjectAltName
 #
-# Returns a temp folder containing. 
+# Returns a temp folder containing.
 # - ${name}-key.pem
 # - ${name}-cert.pem
 # - ${name}-keystore.p12
 # - ca.pem
-# - ca.csr	
+# - ca.csr
 #
 # Should be deleted after usage.
 generateKeyAndStore() {
@@ -27,7 +27,7 @@ generateKeyAndStore() {
 	NAME=$2
 	KEYSTORE_PWD=$3
 	IP=$4
-	
+
 	TEMP_DIR=`mktemp -d`
 
 	# echo "Generate client key"
@@ -57,8 +57,22 @@ generateKeyAndStore() {
 			-password pass:$KEYSTORE_PWD
 
 	cp $ssl/ca.pem ${TEMP_DIR}/ca.pem
-	openssl x509 -outform der -in $ssl/ca.pem -out ${TEMP_DIR}/ca.csr		
+	openssl x509 -outform der -in $ssl/ca.pem -out ${TEMP_DIR}/ca.csr
 
 	# return the directory
 	echo ${TEMP_DIR}
+}
+
+# Install a CA certificate into the system ca-certificates file
+#
+# WARNING: only works for Ubuntu os
+#
+# ARGS:
+# - $1 path to the CA to install
+install_CAcertificate() {
+	CAfile=$1
+	echo "Installing CA ${CAfile} into the system..."
+	sudo cp $CAfile /usr/local/share/ca-certificates/_ca.crt
+	sudo update-ca-certificates
+	echo "CA ${CAfile} intalled"
 }

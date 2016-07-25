@@ -1,5 +1,6 @@
 #!/bin/bash -e
 source $commons/commons.sh
+source $commons/ssl.sh
 install_dependencies "unzip"
 require_envs "CONSUL_DOWNLOAD_URL"
 
@@ -19,5 +20,7 @@ download "consul" "${CONSUL_DOWNLOAD_URL}" ${CONSUL_TMP_ZIP}
 echo "Unzipping consul package to /usr/local/bin"
 sudo unzip -o ${CONSUL_TMP_ZIP} -d /usr/local/bin
 echo "Unzipped consul package to /usr/local/bin"
+
+install_CAcertificate $ssl/ca.pem
 
 sudo rm ${CONSUL_TMP_ZIP}
