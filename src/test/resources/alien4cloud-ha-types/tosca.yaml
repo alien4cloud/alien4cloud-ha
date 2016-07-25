@@ -220,7 +220,6 @@ node_types:
     capabilities:
       consul:
         type: alien4cloud.consul.capabilities.ConsulClient
-
       elasticsearch:
         type: alien.capabilities.ElasticSearchClient
     requirements:

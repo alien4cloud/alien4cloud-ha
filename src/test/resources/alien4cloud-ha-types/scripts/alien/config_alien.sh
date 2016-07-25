@@ -1,5 +1,6 @@
 #!/bin/bash -e
 source $commons/commons.sh
+source $commons/ssl.sh
 
 require_envs "DATA_DIR SERVER_PROTOCOL ALIEN_PORT"
 
@@ -28,35 +29,37 @@ if [ "$SERVER_PROTOCOL" == "https" ]; then
   SERVER_KEYSTORE_PWD="changeit"
   KEY_PWD="${SERVER_KEYSTORE_PWD}"
 
+  TMP_SSL_DIR=$( generateKeyAndStore "alient4cloud.org" "server" "${SERVER_KEYSTORE_PWD}" "${ALIEN_IP}" )
+
   AC4_SSL_DIR=/etc/alien4cloud/ssl
   sudo mkdir -p $AC4_SSL_DIR
 
-  TEMP_DIR=`mktemp -d`
+  # TEMP_DIR=`mktemp -d`
   # TODO: use commons ssl
   # Generate a keypair for the server or client, and sign it with the CA
-  sudo openssl genrsa -out $TEMP_DIR/server-key.pem 4096
-  sudo openssl req -subj "/CN=alien4cloud.org" -sha256 -new -key $TEMP_DIR/server-key.pem -out $TEMP_DIR/server.csr
-  # this cert will be used for the https api
-  sudo echo "subjectAltName = IP:${ALIEN_IP}" > $TEMP_DIR/extfile.cnf
-  sudo openssl x509 -req -days 365 -sha256 \
-    -in $TEMP_DIR/server.csr -CA $ssl/ca.pem -CAkey $ssl/ca-key.pem \
-    -CAcreateserial -out $TEMP_DIR/server-cert.pem \
-    -passin pass:${CA_PASSPHRASE} \
-    -extfile $TEMP_DIR/extfile.cnf
+  # sudo openssl genrsa -out $TEMP_DIR/server-key.pem 4096
+  # sudo openssl req -subj "/CN=alien4cloud.org" -sha256 -new -key $TEMP_DIR/server-key.pem -out $TEMP_DIR/server.csr
+  # # this cert will be used for the https api
+  # sudo echo "subjectAltName = IP:${ALIEN_IP}" > $TEMP_DIR/extfile.cnf
+  # sudo openssl x509 -req -days 365 -sha256 \
+  #   -in $TEMP_DIR/server.csr -CA $ssl/ca.pem -CAkey $ssl/ca-key.pem \
+  #   -CAcreateserial -out $TEMP_DIR/server-cert.pem \
+  #   -passin pass:${CA_PASSPHRASE} \
+  #   -extfile $TEMP_DIR/extfile.cnf
 
-  # poulate key store
-  sudo openssl pkcs12 -export -name alien4cloudClient \
-    -in $TEMP_DIR/server-cert.pem -inkey $TEMP_DIR/server-key.pem \
-    -out $TEMP_DIR/server-keystore.p12 -chain \
-    -CAfile $ssl/ca.pem -caname root \
-    -password pass:$SERVER_KEYSTORE_PWD
+  # # poulate key store
+  # sudo openssl pkcs12 -export -name alien4cloudClient \
+  #   -in $TEMP_DIR/server-cert.pem -inkey $TEMP_DIR/server-key.pem \
+  #   -out $TEMP_DIR/server-keystore.p12 -chain \
+  #   -CAfile $ssl/ca.pem -caname root \
+  #   -password pass:$SERVER_KEYSTORE_PWD
 
   sudo keytool -importkeystore -destkeystore $AC4_SSL_DIR/server-keystore.jks \
-    -srckeystore $TEMP_DIR/server-keystore.p12 -srcstoretype pkcs12 \
-    -alias alien4cloudClient -deststorepass $SERVER_KEYSTORE_PWD \
+    -srckeystore $TMP_SSL_DIR/server-keystore.p12 -srcstoretype pkcs12 \
+    -alias server -deststorepass $SERVER_KEYSTORE_PWD \
     -srckeypass $KEY_PWD -srcstorepass $SERVER_KEYSTORE_PWD
 
-  sudo rm -rf $TEMP_DIR
+  sudo rm -rf $TMP_SSL_DIR
 
   sudo sed -i -e "s@#  key-store\: \(.*\)@  key-store\: \"$AC4_SSL_DIR/server-keystore.jks\"@g" ${A4C_CONFIG}
   sudo sed -i -e "s/#  key-store-password\: \(.*\)/  key-store-password\: \"$SERVER_KEYSTORE_PWD\"/g" ${A4C_CONFIG}

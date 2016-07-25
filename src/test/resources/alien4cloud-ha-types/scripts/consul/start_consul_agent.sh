@@ -28,22 +28,28 @@ if [ "$TLS_ENABLED" == "true" ]; then
 
   # TODO: use commons ssl 
 	SSL_REPO=/etc/consul/ssl
-	# Generate a keypair for the server or client, and sign it with the CA
-	sudo cp $ssl/ca.pem $SSL_REPO/ca.pem
-	sudo openssl genrsa -out $SSL_REPO/${CONSUL_AGENT_MODE}-key.pem 4096
-	sudo openssl req -subj "/CN=alien4cloud.org" -sha256 -new -key $SSL_REPO/${CONSUL_AGENT_MODE}-key.pem -out $TEMP_DIR/server.csr
-	sudo echo "[ ssl_client ]" > $TEMP_DIR/extfile.cnf
-	# this cert will be used for the https api
-	# since we use it only in local between client and consul client we bind it to 127.0.0.1
-	sudo echo "subjectAltName = IP:127.0.0.1" >> $TEMP_DIR/extfile.cnf
-	sudo echo "extendedKeyUsage=serverAuth,clientAuth" >> $TEMP_DIR/extfile.cnf
-	sudo openssl x509 -req -days 365 -sha256 \
-		-in $TEMP_DIR/server.csr -CA $SSL_REPO/ca.pem -CAkey $ssl/ca-key.pem \
-		-CAcreateserial -out $SSL_REPO/${CONSUL_AGENT_MODE}-cert.pem \
-		-passin pass:${CA_PASSPHRASE} \
-		-extfile $TEMP_DIR/extfile.cnf -extensions ssl_client
 
-  sudo rm -rf $TEMP_DIR
+  TMP_SSL_DIR=$( generateKeyAndStore "alient4cloud.org" "${CONSUL_AGENT_MODE}" "${SERVER_KEYSTORE_PWD}" "127.0.0.1" )
+	sudo cp $TMP_SSL_DIR/ca.pem $SSL_REPO/ca.pem
+	sudo cp $TMP_SSL_DIR/${CONSUL_AGENT_MODE}-key.pem $SSL_REPO/${CONSUL_AGENT_MODE}-key.pem
+	sudo cp $TMP_SSL_DIR/${CONSUL_AGENT_MODE}-cert.pem $SSL_REPO/${CONSUL_AGENT_MODE}-cert.pem
+
+	# # Generate a keypair for the server or client, and sign it with the CA
+	# sudo cp $ssl/ca.pem $SSL_REPO/ca.pem
+	# sudo openssl genrsa -out $SSL_REPO/${CONSUL_AGENT_MODE}-key.pem 4096
+	# sudo openssl req -subj "/CN=alien4cloud.org" -sha256 -new -key $SSL_REPO/${CONSUL_AGENT_MODE}-key.pem -out $TEMP_DIR/server.csr
+	# sudo echo "[ ssl_client ]" > $TEMP_DIR/extfile.cnf
+	# # this cert will be used for the https api
+	# # since we use it only in local between client and consul client we bind it to 127.0.0.1
+	# sudo echo "subjectAltName = IP:127.0.0.1" >> $TEMP_DIR/extfile.cnf
+	# sudo echo "extendedKeyUsage=serverAuth,clientAuth" >> $TEMP_DIR/extfile.cnf
+	# sudo openssl x509 -req -days 365 -sha256 \
+	# 	-in $TEMP_DIR/server.csr -CA $SSL_REPO/ca.pem -CAkey $ssl/ca-key.pem \
+	# 	-CAcreateserial -out $SSL_REPO/${CONSUL_AGENT_MODE}-cert.pem \
+	# 	-passin pass:${CA_PASSPHRASE} \
+	# 	-extfile $TEMP_DIR/extfile.cnf -extensions ssl_client
+
+  sudo rm -rf $TMP_SSL_DIR
 fi
 
 echo "Start consul agent in ${CONSUL_AGENT_MODE} mode, expecting ${BOOTSTRAP_EXPECT} servers, data dir at ${CONSUL_DATA_DIR}, bind on interface ${CONSUL_BIND_ADDRESS}"
