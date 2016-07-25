@@ -1,0 +1,80 @@
+tosca_definitions_version: alien_dsl_1_1_0
+
+template_name: alien4cloud-ha-topo-consul
+template_version: 1.0.0-SNAPSHOT
+template_author: Fastconnect
+
+imports:
+  - "alien4cloud-ha-types:1.0.0-SNAPSHOT"
+  - "tosca-normative-types:1.0.0-SNAPSHOT"
+
+topology_template:
+
+  inputs:
+    consul_tls_enabled:
+      description: If true, TLS will be enabled on consul agents (HTTPS).
+      type: boolean
+      required: false
+      default: true
+    consul_api_port:
+      description: The port where consul will listen for API (HTTP or HTTPS).
+      type: integer
+      required: false
+      default: 8555
+    ssl_ca_passphrase:
+      description: The passphrase for the CA certificate.
+      type: string
+      required: false
+      default: "dontChangeIt"
+    consul_gossip_encrypt_key:
+      description: The key to encrypt gossip exchanges into consul cluster.
+      type: string
+      required: false
+      default: "DicJJnc08ek/6pCxnQ/Rhg=="
+
+  node_templates:
+
+    ConsulClientCompute:
+      type: tosca.nodes.Compute
+      capabilities:
+        scalable:
+          properties:
+            max_instances: 1
+            min_instances: 1
+            default_instances: 1
+    ConsulServerCompute:
+      type: tosca.nodes.Compute
+      capabilities:
+        scalable:
+          properties:
+            max_instances: 3
+            min_instances: 1
+            default_instances: 3
+
+    # Others
+    ConsulServer:
+      type: alien4cloud.consul.nodes.ConsulServer
+      properties:
+        tls_enabled: { get_input: consul_tls_enabled }
+        ca_passphrase: { get_input: ssl_ca_passphrase }
+        encrypt_key: { get_input: consul_gossip_encrypt_key }
+      capabilities:
+        consul_agent:
+          properties:
+            api_port: { get_input: consul_api_port }
+      requirements:
+        - host: ConsulServerCompute
+
+    AlienConsulClient:
+      type: alien4cloud.consul.nodes.ConsulClient
+      properties:
+        tls_enabled: { get_input: consul_tls_enabled }
+        ca_passphrase: { get_input: ssl_ca_passphrase }
+        encrypt_key: { get_input: consul_gossip_encrypt_key }
+      capabilities:
+        consul_agent:
+          properties:
+            api_port: { get_input: consul_api_port }
+      requirements:
+        - host: ConsulClientCompute
+        - consul_server: ConsulServer
