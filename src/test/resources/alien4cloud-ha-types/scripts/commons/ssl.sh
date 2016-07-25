@@ -40,7 +40,7 @@ generateKeyAndStore() {
 	echo "[ ssl_client ]" > ${TEMP_DIR}/extfile.cnf
 	echo "extendedKeyUsage=serverAuth,clientAuth" >> ${TEMP_DIR}/extfile.cnf
 	if [ "${IP}" ]; then
-  	sudo echo "subjectAltName = IP:${IP}" > ${TEMP_DIR}/extfile.cnf
+  	sudo echo "subjectAltName = IP:${IP}" >> ${TEMP_DIR}/extfile.cnf
 	fi
 	openssl x509 -req -days 365 -sha256 \
 	        -in ${TEMP_DIR}/${NAME}.csr -CA $ssl/ca.pem -CAkey $ssl/ca-key.pem \

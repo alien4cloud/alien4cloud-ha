@@ -1,0 +1,75 @@
+tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
+
+template_name: alien4cloud-ha-openstack
+template_version: 1.0.0-SNAPSHOT
+template_author: Fastconnect
+
+imports:
+  - alien4cloud-ha-topo-consul:*
+  - openstack-provider-types:*
+
+topology_template:
+
+  inputs:
+    image:
+      type: string
+      default: "02ddfcbb-9534-44d7-974d-5cfd36dfbcab"
+    flavor:
+      type: string
+      default: "2"
+    key_pair_name:
+      type: string
+      default: "xde-havanna"
+    login:
+      type: string
+      default: "ubuntu"
+    key_path:
+      type: string
+      default: xde-havanna.pem
+    security_group_names:
+      type: list
+      entry_schema:
+        type: string
+      default: ["openbar"]
+    external_network_name:
+      type: string
+      default: "net-pub"
+
+  node_templates:
+    ConsulServerCompute:
+      type: com.toscaruntime.openstack.nodes.Compute
+      properties:
+        image: { get_input: image }
+        flavor: { get_input: flavor }
+        login: { get_input: login }
+        key_pair_name: { get_input: key_pair_name }
+        key_path: { get_input: key_path }
+        security_group_names: { get_input: security_group_names }
+        user_data: |
+          #!/bin/sh
+          sudo cp /etc/hosts /tmp/hosts
+          echo 127.0.0.1 `hostname` | sudo tee /etc/hosts > /dev/null
+          cat  /tmp/hosts | sudo tee -a /etc/hosts > /dev/null
+      capabilities:
+        scalable:
+          properties:
+            max_instances: 3
+            min_instances: 1
+            default_instances: 3          
+    ConsulClientCompute:
+      type: com.toscaruntime.openstack.nodes.Compute
+      properties:
+        image: { get_input: image }
+        flavor: { get_input: flavor }
+        login: { get_input: login }
+        key_pair_name: { get_input: key_pair_name }
+        key_path: { get_input: key_path }
+        security_group_names: { get_input: security_group_names }
+        user_data: |
+          #!/bin/sh
+          sudo cp /etc/hosts /tmp/hosts
+          echo 127.0.0.1 `hostname` | sudo tee /etc/hosts > /dev/null
+          cat  /tmp/hosts | sudo tee -a /etc/hosts > /dev/null  
+
+ 
+
