@@ -44,21 +44,8 @@ if [ "$TLS_ENABLED" == "true" ]; then
 	sudo cp $SSL_DIR/$KEY_ALIAS-key.pem $SSL_REPO/client-key.pem
 	sudo cp $SSL_DIR/ca.pem $SSL_REPO/ca.pem
 	sudo cp $SSL_DIR/$KEY_ALIAS-cert.pem $SSL_REPO/client-cert.pem
-	#sudo rm -rf $SSL_DIR
+	sudo rm -rf $SSL_DIR
 
-
-	# # Generate a keypair for the client, and sign it with the CA
-	# sudo cp $ssl/ca.pem $SSL_REPO/ca.pem
-	# sudo openssl genrsa -out $SSL_REPO/client-key.pem 4096
-	# sudo openssl req -subj "/CN=alien4cloud.org" -sha256 -new -key $SSL_REPO/client-key.pem -out $TEMP_DIR/server.csr
-	# sudo echo "[ ssl_client ]" > $TEMP_DIR/extfile.cnf
-	# #sudo echo "subjectAltName=IP:127.0.0.1" >> extfile.cnf
-	# sudo echo "extendedKeyUsage=serverAuth,clientAuth" >> $TEMP_DIR/extfile.cnf
-	# sudo openssl x509 -req -days 365 -sha256 \
-	# 	-in $TEMP_DIR/server.csr -CA $SSL_REPO/ca.pem -CAkey $ssl/ca-key.pem \
-	# 	-CAcreateserial -out $SSL_REPO/client-cert.pem \
-	# 	-passin pass:${CA_PASSPHRASE} \
-	# 	-extfile $TEMP_DIR/extfile.cnf -extensions ssl_client
 else
 	sudo sed -i -e "s/%AGENT_IP%/${AGENT_IP}/g" $CONF_PATH/consul_template.conf
 fi

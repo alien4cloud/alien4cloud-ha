@@ -46,9 +46,9 @@ topology_template:
       capabilities:
         scalable:
           properties:
-            max_instances: 3
-            min_instances: 3
-            default_instances: 3
+            max_instances: { get_input: backend_count }
+            min_instances: { get_input: backend_count }
+            default_instances: { get_input: backend_count } 
     FrontCompute:
       type: com.toscaruntime.aws.nodes.Instance
       properties:
@@ -87,5 +87,5 @@ topology_template:
           properties:
             max_instances: 10
             min_instances: 1
-            default_instances: 2            
+            default_instances: { get_input: alien_count }           
 

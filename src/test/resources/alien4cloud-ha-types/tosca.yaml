@@ -349,15 +349,6 @@ node_types:
         type: integer
         required: true
         default: 8080
-      # tls_enabled:
-      #   description: define if the agent will be secured
-      #   type: boolean
-      #   required: true
-      #   default: false
-      # ca_passphrase:
-      #   description: the provided CA cert passphrase
-      #   type: string
-      #   required: false
       front_protocol:
         type: string
         required: true
@@ -472,22 +463,6 @@ capability_types:
         type: string
         description: the passphrase for the CA certificate
         required: false
-      # key_store_path:
-      #   type: string
-      #   description: the location of the key store
-      #   required: false
-      # trust_store_path:
-      #   type: string
-      #   description: the location of the trust store
-      #   required: false
-      # keystore_pwd:
-      #   type: string
-      #   description: the password for the key store
-      #   required: false
-      # key_pwd:
-      #   type: string
-      #   description: the password for the key
-      #   required: false
   alien4cloud.consul.capabilities.ConsulServer:
     derived_from: tosca.capabilities.Root
     description: >
@@ -521,7 +496,7 @@ relationship_types:
       - commons: scripts/commons
         type: tosca.artifacts.File
   alien4cloud.consul.relationships.ConnectToConsulAgent:
-    derived_from: tosca.relationships.ConnectsTo
+    derived_from: tosca.relationships.Root
     valid_target_types: [alien4cloud.consul.capabilities.ConsulAgent]
     valid_source_types: [alien4cloud.consul.capabilities.ConsulClient]
     interfaces:
@@ -532,9 +507,6 @@ relationship_types:
             # TOSCA limitation ?
             TLS_ENABLED: { get_property: [SOURCE, consul, tls_enabled] }
             CA_PASSPHRASE: { get_property: [SOURCE, consul, ca_passphrase] }
-            # KEY_STORE_PATH: { get_property: [SOURCE, consul, key_store_path] }
-            # TRUST_STORE_PATH: { get_property: [SOURCE, consul, trust_store_path] }
-            # KEYSTORE_PWD: { get_property: [SOURCE, consul, keystore_pwd] }
             AGENT_IP: { get_attribute: [TARGET, ip_address] }
             AGENT_API_PORT: { get_property: [TARGET, consul_agent, api_port] }
           implementation: scripts/ConnectToConsulAgent/pre_configure_source.sh

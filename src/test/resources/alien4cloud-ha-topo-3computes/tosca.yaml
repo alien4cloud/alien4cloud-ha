@@ -59,6 +59,16 @@ topology_template:
       type: string
       required: false
       default: "DicJJnc08ek/6pCxnQ/Rhg=="
+    backend_count:
+      description: The number of backends to start.
+      type: integer
+      required: true
+      default: 3      
+    alien_count:
+      description: The number of ALIENs to start.
+      type: integer
+      required: true
+      default: 2      
   outputs:
     alien_url:
       description: The URL to access A4C.
@@ -84,15 +94,15 @@ topology_template:
           properties:
             max_instances: 10
             min_instances: 1
-            default_instances: 1
+            default_instances: { get_input: alien_count }
     BackendCompute:
       type: tosca.nodes.Compute
       capabilities:
         scalable:
           properties:
-            max_instances: 3
-            min_instances: 1
-            default_instances: 1
+            max_instances: { get_input: backend_count }
+            min_instances: { get_input: backend_count }
+            default_instances: { get_input: backend_count }
 
     # Others
     ConsulServer:

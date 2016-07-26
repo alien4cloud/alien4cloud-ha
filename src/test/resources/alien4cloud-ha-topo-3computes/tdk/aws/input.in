@@ -1,3 +1,11 @@
+rproxy_port: 80
+alien_port: 8080
+alien_protocol: http
+front_protocol: http
+consul_tls_enabled: false
+backend_count: 3
+alien_count: 2
+# aws
 image_id: "ami-47a23a30"
 instance_type: "t2.small"
 key_name: "xde-aws"

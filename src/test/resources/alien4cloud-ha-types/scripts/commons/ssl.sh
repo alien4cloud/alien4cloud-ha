@@ -66,6 +66,7 @@ generateKeyAndStore() {
 # Install a CA certificate into the system ca-certificates file
 #
 # WARNING: only works for Ubuntu os
+# TODO: test and adapt for centos
 #
 # ARGS:
 # - $1 path to the CA to install

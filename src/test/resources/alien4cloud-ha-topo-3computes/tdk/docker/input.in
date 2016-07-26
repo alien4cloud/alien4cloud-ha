@@ -1,0 +1,7 @@
+rproxy_port: 80
+alien_port: 8080
+alien_protocol: http
+front_protocol: http
+consul_tls_enabled: false
+backend_count: 1
+alien_count: 1
