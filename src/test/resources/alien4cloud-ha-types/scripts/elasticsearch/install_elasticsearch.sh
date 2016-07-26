@@ -1,8 +1,6 @@
 #!/bin/bash -e
+source $commons/commons.sh
 
-# check dependencies
-command -v wget >/dev/null 2>&1 || { echo "I require wget but it's not installed.  Aborting." >&2; exit 1; }
-command -v dpkg >/dev/null 2>&1 || { echo "I require dpkg but it's not installed.  Aborting." >&2; exit 1; }
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
@@ -16,7 +14,13 @@ elasticsearch         soft    nofile      $openLimit
 ' >> /etc/security/limits.conf"
 
 # Download the application and install elasticsearch
-sudo wget --quiet ${APPLICATION_URL}
+download "ElasticSearch" "${APPLICATION_URL}" "elasticsearch.deb"
+
+while sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1 ; 
+do
+	echo "$NAME waiting for other software managers to finish..."
+  sleep 2
+done
 sudo dpkg -i elasticsearch*.deb
 
 # Update configuration

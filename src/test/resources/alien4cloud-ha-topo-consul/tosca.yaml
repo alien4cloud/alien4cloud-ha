@@ -15,7 +15,7 @@ topology_template:
       description: If true, TLS will be enabled on consul agents (HTTPS).
       type: boolean
       required: false
-      default: true
+      default: false
     consul_api_port:
       description: The port where consul will listen for API (HTTP or HTTPS).
       type: integer
@@ -34,6 +34,8 @@ topology_template:
 
   node_templates:
 
+    Network:
+      type: tosca.nodes.Network
     ConsulClientCompute:
       type: tosca.nodes.Compute
       capabilities:
@@ -42,6 +44,11 @@ topology_template:
             max_instances: 1
             min_instances: 1
             default_instances: 1
+      requirements:
+        - network:
+            node: Network
+            capability: tosca.capabilities.Connectivity
+            relationship: tosca.relationships.Network            
     ConsulServerCompute:
       type: tosca.nodes.Compute
       capabilities:

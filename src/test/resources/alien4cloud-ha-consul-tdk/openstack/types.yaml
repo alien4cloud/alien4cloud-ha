@@ -36,6 +36,10 @@ topology_template:
       default: "net-pub"
 
   node_templates:
+    Network:
+      type: com.toscaruntime.openstack.nodes.ExternalNetwork
+      properties:
+        network_name: { get_input: external_network_name}
     ConsulServerCompute:
       type: com.toscaruntime.openstack.nodes.Compute
       properties:
@@ -55,7 +59,12 @@ topology_template:
           properties:
             max_instances: 3
             min_instances: 1
-            default_instances: 3          
+            default_instances: 3     
+      requirements:
+        - network:
+            node: Network
+            capability: tosca.capabilities.Connectivity
+            relationship: tosca.relationships.Network                  
     ConsulClientCompute:
       type: com.toscaruntime.openstack.nodes.Compute
       properties:
@@ -70,6 +79,10 @@ topology_template:
           sudo cp /etc/hosts /tmp/hosts
           echo 127.0.0.1 `hostname` | sudo tee /etc/hosts > /dev/null
           cat  /tmp/hosts | sudo tee -a /etc/hosts > /dev/null  
-
+      requirements:
+        - network:
+            node: Network
+            capability: tosca.capabilities.Connectivity
+            relationship: tosca.relationships.Network     
  
 

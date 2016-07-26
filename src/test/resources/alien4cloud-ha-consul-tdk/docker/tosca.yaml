@@ -11,6 +11,11 @@ imports:
 topology_template:
 
   node_templates:
+    Network:
+      type: com.toscaruntime.docker.nodes.Network
+      properties:
+        network_name: alienNet
+        cidr: 10.67.79.0/24    
     ConsulServerCompute:
       type: com.toscaruntime.docker.nodes.Container
       properties:
@@ -19,3 +24,8 @@ topology_template:
       type: com.toscaruntime.docker.nodes.Container
       properties:
         image_id: toscaruntime/ubuntu-trusty
+      requirements:
+        - network:
+            node: Network
+            capability: tosca.capabilities.Connectivity
+            relationship: tosca.relationships.Network  
