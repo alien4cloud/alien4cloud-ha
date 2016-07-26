@@ -75,5 +75,5 @@ install_CAcertificate() {
 	echo "Installing CA ${CAfile} into the system..."
 	sudo cp $CAfile /usr/local/share/ca-certificates/_ca.crt
 	sudo update-ca-certificates
-	echo "CA ${CAfile} intalled"
+	echo "CA ${CAfile} installed"
 }

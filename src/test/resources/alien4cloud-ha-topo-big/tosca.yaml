@@ -1,7 +1,6 @@
 tosca_definitions_version: alien_dsl_1_1_0
-#tosca_definitions_version: tosca_simple_yaml_1_0_0_wd03
 
-template_name: alien4cloud-ha
+template_name: alien4cloud-ha-topo-3computes
 template_version: 1.0.0-SNAPSHOT
 template_author: Fastconnect
 
@@ -9,9 +8,6 @@ imports:
   - "alien4cloud-ha-types:1.0.0-SNAPSHOT"
   - "tosca-normative-types:1.0.0-SNAPSHOT"
   - "jdk-type:1.0.0-SNAPSHOT"
-#  - tosca-normative-types:*
-#  - jdk-type:*
-
 
 topology_template:
 
@@ -20,16 +16,22 @@ topology_template:
       description: The reverse proxy will listen on this port.
       type: integer
       required: true
-      default: 8443
+      default: 80
     alien_port:
       description: The A4C webapps will listen on this port.
       type: integer
       required: true
-      default: 8443
+      default: 8080
     alien_protocol:
       type: string
       required: true
-      default: https
+      default: http
+      constraints:
+        - valid_values: ["http", "https"]
+    front_protocol:
+      type: string
+      required: true
+      default: http
       constraints:
         - valid_values: ["http", "https"]
     alien_data_dir:
@@ -41,7 +43,12 @@ topology_template:
       description: If true, TLS will be enabled on consul agents (HTTPS).
       type: boolean
       required: false
-      default: true
+      default: false
+    consul_api_port:
+      description: The port where consul will listen for API (HTTP or HTTPS).
+      type: integer
+      required: false
+      default: 8500
     ssl_ca_passphrase:
       description: The passphrase for the CA certificate.
       type: string
@@ -52,30 +59,33 @@ topology_template:
       type: string
       required: false
       default: "DicJJnc08ek/6pCxnQ/Rhg=="
+    backend_count:
+      description: The number of backends to start.
+      type: integer
+      required: true
+      default: 2      
+    alien_count:
+      description: The number of ALIENs to start.
+      type: integer
+      required: true
+      default: 2      
+    consul_count:
+      description: The number of consuls to start.
+      type: integer
+      required: true
+      default: 3  
   outputs:
     alien_url:
       description: The URL to access A4C.
       value: { get_attribute: [ ReverseProxy, service_url ] }
+
   node_templates:
+
+    # Natives
     Network:
       type: tosca.nodes.Network
-    ConsulServerCompute:
-      type: tosca.nodes.Compute
-      capabilities:
-        scalable:
-          properties:
-            max_instances: 3
-            min_instances: 3
-            default_instances: 3
-    ElasticSearchCompute:
-      type: tosca.nodes.Compute
-      capabilities:
-        scalable:
-          properties:
-            max_instances: 2
-            min_instances: 2
-            default_instances: 2
-    ReverseProxyCompute:
+
+    FrontCompute:
       type: tosca.nodes.Compute
       requirements:
         - network:
@@ -88,26 +98,65 @@ topology_template:
         scalable:
           properties:
             max_instances: 10
-            min_instances: 2
-            default_instances: 2
-    SambaServerCompute:
+            min_instances: 1
+            default_instances: { get_input: alien_count }
+    BackendCompute:
       type: tosca.nodes.Compute
+      capabilities:
+        scalable:
+          properties:
+            max_instances: { get_input: backend_count }
+            min_instances: { get_input: backend_count }
+            default_instances: { get_input: backend_count }
+    ConsulCompute:
+      type: tosca.nodes.Compute
+      capabilities:
+        scalable:
+          properties:
+            max_instances: { get_input: consul_count }
+            min_instances: { get_input: consul_count }
+            default_instances: { get_input: consul_count }            
+    SambaCompute:
+      type: tosca.nodes.Compute
+
+    # Others
     ConsulServer:
       type: alien4cloud.consul.nodes.ConsulServer
       properties:
         tls_enabled: { get_input: consul_tls_enabled }
         ca_passphrase: { get_input: ssl_ca_passphrase }
         encrypt_key: { get_input: consul_gossip_encrypt_key }
+      capabilities:
+        consul_agent:
+          properties:
+            api_port: { get_input: consul_api_port }
       requirements:
-        - host: ConsulServerCompute
-    ReverseProxyConsulClient:
+        - host: ConsulCompute
+    ConsulClient:
       type: alien4cloud.consul.nodes.ConsulClient
       properties:
         tls_enabled: { get_input: consul_tls_enabled }
         ca_passphrase: { get_input: ssl_ca_passphrase }
         encrypt_key: { get_input: consul_gossip_encrypt_key }
+      capabilities:
+        consul_agent:
+          properties:
+            api_port: { get_input: consul_api_port }
       requirements:
-        - host: ReverseProxyCompute
+        - host: FrontCompute
+        - consul_server: ConsulServer
+    AlienConsulClient:
+      type: alien4cloud.consul.nodes.ConsulClient
+      properties:
+        tls_enabled: { get_input: consul_tls_enabled }
+        ca_passphrase: { get_input: ssl_ca_passphrase }
+        encrypt_key: { get_input: consul_gossip_encrypt_key }
+      capabilities:
+        consul_agent:
+          properties:
+            api_port: { get_input: consul_api_port }
+      requirements:
+        - host: AlienCompute
         - consul_server: ConsulServer
     ReverseProxy:
       type: alien.ha.types.Nginx
@@ -115,21 +164,26 @@ topology_template:
         listen_port: { get_input: rproxy_port }
         ca_passphrase: { get_input: ssl_ca_passphrase }
         target_protocol: { get_input: alien_protocol }
+        front_protocol: { get_input: front_protocol }
       requirements:
-        - host: ReverseProxyCompute
+        - host: FrontCompute
     ConsulTemplate:
       type: alien.ha.types.ConsulTemplate4Nginx
       properties:
         listen_port: { get_input: rproxy_port }
-        tls_enabled: { get_input: consul_tls_enabled }
-        ca_passphrase: { get_input: ssl_ca_passphrase }
         target_protocol: { get_input: alien_protocol }
+        front_protocol: { get_input: front_protocol }
+      capabilities:
+        consul:
+          properties:
+            tls_enabled: { get_input: consul_tls_enabled }
+            ca_passphrase: { get_input: ssl_ca_passphrase }
       requirements:
-        - host: ReverseProxyCompute
-        - dependency:
-            node: ReverseProxyConsulClient
-            capability: tosca.capabilities.Node
-            relationship: tosca.relationships.DependsOn
+        - host: FrontCompute
+        - consul:
+            node: ConsulClient
+            capability: alien4cloud.consul.capabilities.ConsulAgent
+            relationship: alien4cloud.consul.relationships.ConnectToConsulAgent
         - dependency:
             node: ReverseProxy
             capability: tosca.capabilities.Node
@@ -138,20 +192,12 @@ topology_template:
       type: alien.nodes.JDK
       requirements:
         - host: AlienCompute
-    AlienConsulClient:
-      type: alien4cloud.consul.nodes.ConsulClient
-      properties:
-        tls_enabled: { get_input: consul_tls_enabled }
-        ca_passphrase: { get_input: ssl_ca_passphrase }
-        encrypt_key: { get_input: consul_gossip_encrypt_key }
-      requirements:
-        - host: AlienCompute
-        - consul_server: ConsulServer
     Alien:
       type: alien.nodes.Alien
       properties:
         alien_url: https://fastconnect.org/owncloud/public.php?service=files&t=59c0ae3b1a41c50677e8804fb0254f1f&download
         app_args: "--spring.profiles.active=security-demo,noApiDoc"
+        jvm_args: "-Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=4000,suspend=n"
         alien_version: 1.3.0-SM2-SNAPSHOT
         listen_port: { get_input: alien_port }
         data_dir: { get_input: alien_data_dir }
@@ -162,10 +208,6 @@ topology_template:
           properties:
             tls_enabled: { get_input: consul_tls_enabled }
             ca_passphrase: { get_input: ssl_ca_passphrase }
-            keystore_pwd: "k3ySt0r3Pwd"
-            key_pwd: "k3yPwd"
-            key_store_path: "/etc/alien4cloud/ssl/client-keystore.jks"
-            trust_store_path: "/etc/alien4cloud/ssl/truststore.jks"
       requirements:
         - java:
             node: AlienJDK
@@ -186,7 +228,7 @@ topology_template:
     ElasticSearchJDK:
       type: alien.nodes.JDK
       requirements:
-        - host: ElasticSearchCompute
+        - host: BackendCompute
     ElasticSearch:
       type: alien.nodes.ElasticSearch
       properties:
@@ -199,7 +241,7 @@ topology_template:
     SambaServer:
       type: alien4cloud.samba.nodes.SambaServer
       requirements:
-        - host: SambaServerCompute
+        - host: SambaCompute
     SambaClient:
       type: alien4cloud.samba.nodes.SambaClient
       requirements:
@@ -210,5 +252,3 @@ topology_template:
             relationship: alien4cloud.samba.relationships.ConnectsToSambaServer
             properties:
               mount_point: { get_input: alien_data_dir }
-
-    

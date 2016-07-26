@@ -67,7 +67,7 @@ if [ -d "/tmp/a4c/work/${NODE}/ConnectToConsulAgent" ]; then
   AGENT_API_PORT=$(</tmp/a4c/work/${NODE}/ConnectToConsulAgent/agentAPIPort)
   AGENT_IP=$(</tmp/a4c/work/${NODE}/ConnectToConsulAgent/agentIp)
 
-  echo "A4C is connected to Consul ${AGENT_IP}:{AGENT_API_PORT}, activate HA"
+  echo "A4C is connected to Consul ${AGENT_IP}:${AGENT_API_PORT}, activate HA"
   sudo sed -i -e "s/ha_enabled\: \(.*\)/ha_enabled\: true/g" ${A4C_CONFIG}
   sudo sed -i -e "s/consulAgentIp\: \(.*\)/consulAgentIp\: ${AGENT_IP}/g" ${A4C_CONFIG}
   sudo sed -i -e "s/consulAgentPort\: \(.*\)/consulAgentPort\: ${AGENT_API_PORT}/g" ${A4C_CONFIG}
