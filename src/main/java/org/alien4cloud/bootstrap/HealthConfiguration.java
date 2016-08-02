@@ -1,4 +1,4 @@
-package org.alien4cloud.ha;
+package org.alien4cloud.bootstrap;
 
 import java.io.File;
 import java.nio.file.Paths;

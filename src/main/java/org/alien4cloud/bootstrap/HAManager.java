@@ -1,4 +1,4 @@
-package org.alien4cloud.ha;
+package org.alien4cloud.bootstrap;
 
 import alien4cloud.events.HALeaderElectionEvent;
 import com.google.common.base.Optional;
@@ -192,13 +192,13 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
         sessionRenewerTaskScheduler = new ThreadPoolTaskScheduler();
         sessionRenewerTaskScheduler.setPoolSize(1);
         sessionRenewerTaskScheduler.setThreadNamePrefix("consul-session-renewer-");
-        sessionRenewerTaskScheduler.setDaemon(true);
+        sessionRenewerTaskScheduler.setDaemon(false);
         sessionRenewerTaskScheduler.initialize();
 
         consulLockAquisitionTaskScheduler = new ThreadPoolTaskScheduler();
         consulLockAquisitionTaskScheduler.setPoolSize(1);
         consulLockAquisitionTaskScheduler.setThreadNamePrefix("consul-lock-aquisition-");
-        consulLockAquisitionTaskScheduler.setDaemon(true);
+        consulLockAquisitionTaskScheduler.setDaemon(false);
         consulLockAquisitionTaskScheduler.initialize();
     }
 
@@ -289,7 +289,7 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
     }
 
     private URL getCheckUrl() throws MalformedURLException {
-        return new URL(serverProtocol + "://" + instanceIp + ":" + listenPort + "/rest/latest/health/check");
+        return new URL(serverProtocol + "://" + instanceIp + ":" + listenPort + "/rest/admin/health");
     }
 
     /**
