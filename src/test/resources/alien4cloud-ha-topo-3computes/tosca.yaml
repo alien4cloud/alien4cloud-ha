@@ -63,12 +63,12 @@ topology_template:
       description: The number of backends to start.
       type: integer
       required: true
-      default: 3      
+      default: 3
     alien_count:
       description: The number of ALIENs to start.
       type: integer
       required: true
-      default: 2      
+      default: 2
   outputs:
     alien_url:
       description: The URL to access A4C.
