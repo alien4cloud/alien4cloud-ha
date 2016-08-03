@@ -3,7 +3,7 @@
   <parent>
     <groupId>alien4cloud</groupId>
     <artifactId>alien4cloud-parent</artifactId>
-    <version>1.3.0-SM2</version>
+    <version>1.3.0-SM3-SNAPSHOT</version>
   </parent>
   <groupId>org.alien4cloud</groupId>
   <artifactId>alien4cloud-ha</artifactId>
@@ -32,7 +32,7 @@
     <sonar.language>java</sonar.language>
     <sonar.jacoco.reportPath>${project.basedir}/../target/jacoco.exec</sonar.jacoco.reportPath>
     <sonar.jacoco.itReportPath>${project.basedir}/../target/jacoco-it.exec</sonar.jacoco.itReportPath>
-    <alien4cloud.version>1.3.0-SM2-SNAPSHOT</alien4cloud.version>
+    <alien4cloud.version>1.3.0-SM3-SNAPSHOT</alien4cloud.version>
   </properties>
 
   <dependencies>
@@ -41,17 +41,17 @@
       <artifactId>consul-client</artifactId>
       <version>0.12.3</version>
     </dependency>
-    
+
     <dependency>
       <groupId>alien4cloud</groupId>
       <artifactId>alien4cloud-common</artifactId>
       <version>${alien4cloud.version}</version>
-    </dependency> 
+    </dependency>
     <dependency>
       <groupId>org.alien4cloud</groupId>
       <artifactId>elasticsearch-mapping</artifactId>
     </dependency>
-       
+
     <!-- tests -->
     <dependency>
       <groupId>junit</groupId>
