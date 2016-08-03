@@ -1,18 +1,5 @@
 package org.alien4cloud.bootstrap;
 
-import alien4cloud.events.HALeaderElectionEvent;
-import com.google.common.base.Optional;
-import com.orbitz.consul.Consul;
-import com.orbitz.consul.Consul.Builder;
-import com.orbitz.consul.async.ConsulResponseCallback;
-import com.orbitz.consul.model.ConsulResponse;
-import com.orbitz.consul.model.agent.ImmutableRegistration;
-import com.orbitz.consul.model.agent.Registration;
-import com.orbitz.consul.model.session.ImmutableSession;
-import com.orbitz.consul.model.session.Session;
-import com.orbitz.consul.model.session.SessionCreatedResponse;
-import com.orbitz.consul.model.session.SessionInfo;
-import com.orbitz.consul.option.QueryOptions;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -28,19 +15,37 @@ import java.security.cert.CertificateException;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
+
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.embedded.EmbeddedServletContainerInitializedEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
+
+import alien4cloud.events.HALeaderElectionEvent;
+
+import com.google.common.base.Optional;
+import com.orbitz.consul.Consul;
+import com.orbitz.consul.Consul.Builder;
+import com.orbitz.consul.async.ConsulResponseCallback;
+import com.orbitz.consul.model.ConsulResponse;
+import com.orbitz.consul.model.agent.ImmutableRegistration;
+import com.orbitz.consul.model.agent.Registration;
+import com.orbitz.consul.model.session.ImmutableSession;
+import com.orbitz.consul.model.session.Session;
+import com.orbitz.consul.model.session.SessionCreatedResponse;
+import com.orbitz.consul.model.session.SessionInfo;
+import com.orbitz.consul.option.QueryOptions;
 
 @Component
 @Slf4j
@@ -157,30 +162,32 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
                     consulReadTimeoutInMillis);
         }
 
-        try {
-            if (log.isDebugEnabled()) {
-                log.debug("Consul connection is secured, initializing the SSL Context using key store <{}> and trust store <{}>", this.keyStorePath,
-                        this.trustStorePath);
+        if (consulTlsEnabled) {
+            try {
+                if (log.isDebugEnabled()) {
+                    log.debug("Consul connection is secured, initializing the SSL Context using key store <{}> and trust store <{}>", this.keyStorePath,
+                            this.trustStorePath);
+                }
+                SSLContext sslContext = SSLContext.getInstance("TLSv1");
+
+                KeyStore ks = KeyStore.getInstance("JKS");
+                ks.load(new FileInputStream(new File(this.keyStorePath)), this.keyStoresPwd.toCharArray());
+
+                KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                // FIXME: really necessary ?
+                kmf.init(ks, this.keyStoresPwd.toCharArray());
+
+                KeyStore ts = KeyStore.getInstance("JKS");
+                ts.load(new FileInputStream(new File(this.trustStorePath)), this.keyStoresPwd.toCharArray());
+
+                TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                tmf.init(ts);
+
+                sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+                consulBuilder = consulBuilder.withSslContext(sslContext);
+            } catch (KeyStoreException | CertificateException | IOException | UnrecoverableKeyException | KeyManagementException | NoSuchAlgorithmException e) {
+                log.error("Not able to initialize SSL Context", e);
             }
-            SSLContext sslContext = SSLContext.getInstance("TLSv1");
-
-            KeyStore ks = KeyStore.getInstance("JKS");
-            ks.load(new FileInputStream(new File(this.keyStorePath)), this.keyStoresPwd.toCharArray());
-
-            KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            // FIXME: really necessary ?
-            kmf.init(ks, this.keyStoresPwd.toCharArray());
-
-            KeyStore ts = KeyStore.getInstance("JKS");
-            ts.load(new FileInputStream(new File(this.trustStorePath)), this.keyStoresPwd.toCharArray());
-
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            tmf.init(ts);
-
-            sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
-            consulBuilder = consulBuilder.withSslContext(sslContext);
-        } catch (KeyStoreException | CertificateException | IOException | UnrecoverableKeyException | KeyManagementException | NoSuchAlgorithmException e) {
-            log.error("Not able to initialize SSL Context", e);
         }
         consulBuilder = consulBuilder.withReadTimeoutMillis(consulReadTimeoutInMillis);
         consulBuilder = consulBuilder.withConnectTimeoutMillis(consulConnectTimeoutInMillis);
