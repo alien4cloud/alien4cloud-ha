@@ -181,11 +181,11 @@ node_types:
       icon: /images/alien4cloud-logo.png
     properties:
       alien_url:
-        description: The URL where to download A4C archive.
+        description: The URL where to download premium A4C archive.
         type: string
         required: true
-        default: "https://fastconnect.org/owncloud/public.php?service=files&t=0a2bda47eeb33c441d7dcc0110049386&download"
-        #default: "https://fastconnect.org/maven/service/local/repositories/opensource/content/alien4cloud/alien4cloud-ui/1.1.0-SM8/alien4cloud-ui-1.1.0-SM8-standalone.war"
+        default: "https://fastconnect.org/maven/content/repositories/fastconnect/alien4cloud/alien4cloud-premium-dist/1.3.0-SM2/alien4cloud-premium-dist-1.3.0-SM2-dist.tar.gz"
+        #You may provide user and pwd for nexus connection: "https://user:password@fastconnect.org/maven/service/..."
       context_root:
         type: string
         default: "/"
@@ -499,7 +499,7 @@ relationship_types:
       - commons: scripts/commons
         type: tosca.artifacts.File
   alien4cloud.consul.relationships.ConnectToConsulAgent:
-    derived_from: tosca.relationships.Root
+    derived_from: tosca.relationships.ConnectsTo
     valid_target_types: [alien4cloud.consul.capabilities.ConsulAgent]
     valid_source_types: [alien4cloud.consul.capabilities.ConsulClient]
     interfaces:

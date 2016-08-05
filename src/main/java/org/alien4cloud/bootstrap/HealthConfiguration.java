@@ -2,8 +2,11 @@ package org.alien4cloud.bootstrap;
 
 import java.io.File;
 import java.nio.file.Paths;
+
 import javax.annotation.Resource;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.Requests;
@@ -87,7 +90,6 @@ public class HealthConfiguration {
                 log.warn(String.format("Path %s cannot be written on .", this.path));
                 builder.down();
             }
-            log.info(builder.toString());
             builder.withDetail("canRead", path.canRead()).withDetail("canWrite", path.canWrite());
         }
     }

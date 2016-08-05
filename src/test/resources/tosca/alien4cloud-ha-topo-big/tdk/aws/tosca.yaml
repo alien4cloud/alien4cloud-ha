@@ -6,7 +6,7 @@ template_author: Fastconnect
 
 imports:
   - aws-provider-types:*
-  - alien4cloud-ha-topo-3computes:*
+  - alien4cloud-ha-topo-big:*
 
 topology_template:
 
@@ -25,7 +25,7 @@ topology_template:
       type: list
       entry_schema:
         type: string
-        
+
   node_templates:
     Network:
       type: com.toscaruntime.aws.nodes.PublicNetwork
@@ -48,7 +48,7 @@ topology_template:
           properties:
             max_instances: { get_input: backend_count }
             min_instances: { get_input: backend_count }
-            default_instances: { get_input: backend_count } 
+            default_instances: { get_input: backend_count }
     ConsulCompute:
       type: com.toscaruntime.aws.nodes.Instance
       properties:
@@ -68,7 +68,7 @@ topology_template:
           properties:
             max_instances: { get_input: consul_count }
             min_instances: { get_input: consul_count }
-            default_instances: { get_input: consul_count }     
+            default_instances: { get_input: consul_count }
     SambaCompute:
       type: com.toscaruntime.aws.nodes.Instance
       properties:
@@ -82,7 +82,7 @@ topology_template:
           #!/bin/sh
           sudo cp /etc/hosts /tmp/hosts
           echo 127.0.0.1 `hostname` | sudo tee /etc/hosts > /dev/null
-          cat  /tmp/hosts | sudo tee -a /etc/hosts > /dev/null                    
+          cat  /tmp/hosts | sudo tee -a /etc/hosts > /dev/null
     FrontCompute:
       type: com.toscaruntime.aws.nodes.Instance
       properties:
@@ -101,7 +101,7 @@ topology_template:
         - network:
             node: Network
             capability: tosca.capabilities.Connectivity
-            relationship: tosca.relationships.Network            
+            relationship: tosca.relationships.Network
     AlienCompute:
       type: com.toscaruntime.aws.nodes.Instance
       properties:
@@ -121,5 +121,4 @@ topology_template:
           properties:
             max_instances: 10
             min_instances: 1
-            default_instances: { get_input: alien_count }           
-
+            default_instances: { get_input: alien_count }

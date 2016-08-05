@@ -61,7 +61,7 @@ else
   echo "The ElasticSearch cluster is: ${cluster_name}"
   # replace the cluster name in alien config
   sudo sed -i -e "s/clusterName\: \(.*\)/clusterName\: $cluster_name/g" ${A4C_CONFIG}
-  sudo bash -c 'echo "cluster.name: ${cluster_name}" > /etc/alien4cloud/elasticsearch.yml'
+  sudo bash -c 'echo "cluster.name: ${cluster_name}" > /opt/alien4cloud/alien4cloud-premium/config/elasticsearch.yml'
 fi
 
 # enable HA if A4C is connected to a Consul agent
@@ -114,4 +114,3 @@ else
   echo "A4C is not connected to Consul, desactivate HA"
   sudo sed -i -e "s/ha_enabled\: \(.*\)/ha_enabled\: false/g" ${A4C_CONFIG}
 fi
-
