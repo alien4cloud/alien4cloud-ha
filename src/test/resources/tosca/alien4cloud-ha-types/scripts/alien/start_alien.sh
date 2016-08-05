@@ -3,7 +3,7 @@ source $commons/commons.sh
 
 require_envs "SERVER_PROTOCOL ALIEN_PORT"
 
-ALIEN_URL="${SERVER_PROTOCOL}://localhost:${ALIEN_PORT}/rest/latest/health/check"
+ALIEN_URL="${SERVER_PROTOCOL}://localhost:${ALIEN_PORT}/rest/admin/health"
 
 get_response_code() {
 
@@ -56,5 +56,7 @@ wait_for_server() {
   fi
 }
 
-sudo /etc/init.d/alien start
+cd /opt/alien4cloud/alien4cloud-premium
+nohup sudo bash -c "/opt/alien4cloud/alien4cloud-premium/alien4cloud.sh ${APP_ARGS} 2>&1 &" >> /dev/null 2>&1 &
+
 wait_for_server $ALIEN_URL 'alien4cloud'

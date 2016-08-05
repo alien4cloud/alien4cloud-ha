@@ -184,7 +184,8 @@ node_types:
         description: The URL where to download A4C archive.
         type: string
         required: true
-        default: "https://fastconnect.org/maven/service/local/repositories/opensource/content/alien4cloud/alien4cloud-ui/1.1.0-SM8/alien4cloud-ui-1.1.0-SM8-standalone.war"
+        default: "https://fastconnect.org/owncloud/public.php?service=files&t=0a2bda47eeb33c441d7dcc0110049386&download"
+        #default: "https://fastconnect.org/maven/service/local/repositories/opensource/content/alien4cloud/alien4cloud-ui/1.1.0-SM8/alien4cloud-ui-1.1.0-SM8-standalone.war"
       context_root:
         type: string
         default: "/"
@@ -241,8 +242,8 @@ node_types:
         create:
           inputs:
             APPLICATION_URL: { get_property: [SELF, alien_url] }
-            APP_ARGS: { get_property: [SELF, app_args] }
-            JVM_ARGS: { get_property: [SELF, jvm_args] }
+            # APP_ARGS: { get_property: [SELF, app_args] }
+            # JVM_ARGS: { get_property: [SELF, jvm_args] }
             ALIEN_VERSION: { get_property: [SELF, alien_version] }
             DATA_DIR: { get_property: [SELF, data_dir] }
           implementation: scripts/alien/install_alien.sh
@@ -260,6 +261,8 @@ node_types:
           implementation: scripts/alien/config_alien.sh
         start:
           inputs:
+            APP_ARGS: { get_property: [SELF, app_args] }
+            JVM_ARGS: { get_property: [SELF, jvm_args] }
             ALIEN_IP: { get_attribute: [HOST, ip_address] }
             ALIEN_PORT: { get_property: [SELF, listen_port] }
             SERVER_PROTOCOL: { get_property: [SELF, server_protocol] }
