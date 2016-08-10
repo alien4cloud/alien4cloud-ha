@@ -15,7 +15,8 @@ server {
         location / {
                 proxy_pass %TARGET_PROTOCOL%://{{key "service/a4c/leader"}}/;
                 proxy_ssl_session_reuse on;
-                
+                proxy_set_header                Host %SERVER_NAME%;
+                proxy_pass_request_headers      on;
                 # Force https
                 proxy_redirect http:// https://;
         }

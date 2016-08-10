@@ -190,6 +190,8 @@ topology_template:
             relationship: tosca.relationships.DependsOn
     AlienJDK:
       type: alien.nodes.JDK
+      properties:
+        java_url: http://download.oracle.com/otn-pub/java/jdk/8u101-b13/jdk-8u101-linux-x64.tar.gz
       requirements:
         - host: AlienCompute
     Alien:

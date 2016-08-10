@@ -57,6 +57,11 @@ wait_for_server() {
 }
 
 cd /opt/alien4cloud/alien4cloud-premium
+sudo mkdir -p WEB-INF/lib
+sudo mv includes/* WEB-INF/lib/
+WAR_FILE=$(ls alien4cloud-ui-*.war)
+sudo jar -uf0 $WAR_FILE WEB-INF/lib/*
+sudo rm -rf WEB-INF
 nohup sudo bash -c "/opt/alien4cloud/alien4cloud-premium/alien4cloud.sh ${APP_ARGS} 2>&1 &" >> /dev/null 2>&1 &
 
 wait_for_server $ALIEN_URL 'alien4cloud'

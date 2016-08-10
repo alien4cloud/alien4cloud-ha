@@ -231,7 +231,7 @@ node_types:
     requirements:
       - elasticsearch: alien.capabilities.ElasticSearch
         type: alien4cloud.relationships.ConnectToElasticSearch
-        lower_bound: 1
+        lower_bound: 0
         upper_bound: 1
       - consul: alien4cloud.consul.capabilities.ConsulAgent
         type: alien4cloud.consul.relationships.ConnectToConsulAgent
