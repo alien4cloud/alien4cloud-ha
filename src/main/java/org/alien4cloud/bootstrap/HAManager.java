@@ -151,6 +151,7 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
     @PostConstruct
     public void init() {
         if (!haEnabled) {
+            log.info("HA is not enabled, H.A. Manager does not try to manage state.");
             return;
         }
 
