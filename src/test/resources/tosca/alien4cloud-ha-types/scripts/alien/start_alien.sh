@@ -58,7 +58,7 @@ wait_for_server() {
 
 cd /opt/alien4cloud/alien4cloud-premium
 sudo mkdir -p WEB-INF/lib
-sudo mv includes/* WEB-INF/lib/
+sudo mv lib/* WEB-INF/lib/
 WAR_FILE=$(ls alien4cloud-ui-*.war)
 sudo jar -uf0 $WAR_FILE WEB-INF/lib/*
 sudo rm -rf WEB-INF
