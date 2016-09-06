@@ -17,7 +17,7 @@ sudo sed -i -e "s/serverProtocol\: \(.*\)/serverProtocol\: $SERVER_PROTOCOL/g" $
 if [ "$SERVER_PROTOCOL" == "https" ]; then
   echo "Activating ssl endpoint for Alien webapp"
   # enable SSL
-  sudo sed -i -e "s/#ssl\:/ssl\:/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/# ssl\:/ssl\:/g" ${A4C_CONFIG}
 
   # FIXME: can't be different !!! some confusion somewhere ?
   SERVER_KEYSTORE_PWD="changeit"
@@ -35,9 +35,9 @@ if [ "$SERVER_PROTOCOL" == "https" ]; then
 
   sudo rm -rf $TMP_SSL_DIR
 
-  sudo sed -i -e "s@#  key-store\: \(.*\)@  key-store\: \"$AC4_SSL_DIR/server-keystore.jks\"@g" ${A4C_CONFIG}
-  sudo sed -i -e "s/#  key-store-password\: \(.*\)/  key-store-password\: \"$SERVER_KEYSTORE_PWD\"/g" ${A4C_CONFIG}
-  sudo sed -i -e "s/#  key-password\: \(.*\)/  key-password\: \"$KEY_PWD\"/g" ${A4C_CONFIG}
+  sudo sed -i -e "s@#   key-store\: \(.*\)@  key-store\: \"$AC4_SSL_DIR/server-keystore.jks\"@g" ${A4C_CONFIG}
+  sudo sed -i -e "s/#   key-store-password\: \(.*\)/  key-store-password\: \"$SERVER_KEYSTORE_PWD\"/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/#   key-password\: \(.*\)/  key-password\: \"$KEY_PWD\"/g" ${A4C_CONFIG}
 fi
 
 # get the ES address list
@@ -52,9 +52,9 @@ if [ -z "$es_list" ]; then
 else
   echo "A4C is connected to remote ElasticSearch ${es_list}"
   sudo sed -i -e "s/client\: \(.*\)/client\: true/g" ${A4C_CONFIG}
-  sudo sed -i -e "s/transportClient\: \(.*\)/transportClient\: true/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/# transportClient\: \(.*\)/transportClient\: true/g" ${A4C_CONFIG}
   # set the elsaticsearch hosts
-  sudo sed -i -e "s/hosts\: \(.*\)/hosts\: $es_list/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/# hosts\: \(.*\)/hosts\: $es_list/g" ${A4C_CONFIG}
 
   # get the cluster name
   cluster_name=$(</tmp/a4c/work/${NODE}/cluster_name)
