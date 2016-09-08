@@ -4,7 +4,7 @@ source $commons/ssl.sh
 
 require_envs "DATA_DIR SERVER_PROTOCOL ALIEN_PORT"
 
-A4C_CONFIG="/etc/alien4cloud/alien4cloud-config.yml"
+A4C_CONFIG="/opt/alien4cloud/alien4cloud-premium/config/alien4cloud-config.yml"
 
 # replace the alien data dir
 echo "A4C data dir is ${DATA_DIR}"
@@ -17,7 +17,7 @@ sudo sed -i -e "s/serverProtocol\: \(.*\)/serverProtocol\: $SERVER_PROTOCOL/g" $
 if [ "$SERVER_PROTOCOL" == "https" ]; then
   echo "Activating ssl endpoint for Alien webapp"
   # enable SSL
-  sudo sed -i -e "s/#ssl\:/ssl\:/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/# ssl\:/ssl\:/g" ${A4C_CONFIG}
 
   # FIXME: can't be different !!! some confusion somewhere ?
   SERVER_KEYSTORE_PWD="changeit"
@@ -35,13 +35,15 @@ if [ "$SERVER_PROTOCOL" == "https" ]; then
 
   sudo rm -rf $TMP_SSL_DIR
 
-  sudo sed -i -e "s@#  key-store\: \(.*\)@  key-store\: \"$AC4_SSL_DIR/server-keystore.jks\"@g" ${A4C_CONFIG}
-  sudo sed -i -e "s/#  key-store-password\: \(.*\)/  key-store-password\: \"$SERVER_KEYSTORE_PWD\"/g" ${A4C_CONFIG}
-  sudo sed -i -e "s/#  key-password\: \(.*\)/  key-password\: \"$KEY_PWD\"/g" ${A4C_CONFIG}
+  sudo sed -i -e "s@#   key-store\: \(.*\)@  key-store\: \"$AC4_SSL_DIR/server-keystore.jks\"@g" ${A4C_CONFIG}
+  sudo sed -i -e "s/#   key-store-password\: \(.*\)/  key-store-password\: \"$SERVER_KEYSTORE_PWD\"/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/#   key-password\: \(.*\)/  key-password\: \"$KEY_PWD\"/g" ${A4C_CONFIG}
 fi
 
 # get the ES address list
-es_list=$(</tmp/a4c/work/${NODE}/es_list)
+if [ -f /tmp/a4c/work/${NODE}/es_list ]; then
+  es_list=$(</tmp/a4c/work/${NODE}/es_list)
+fi
 
 if [ -z "$es_list" ]; then
   echo "Not connected to any ES cluster"
@@ -50,16 +52,16 @@ if [ -z "$es_list" ]; then
 else
   echo "A4C is connected to remote ElasticSearch ${es_list}"
   sudo sed -i -e "s/client\: \(.*\)/client\: true/g" ${A4C_CONFIG}
-  sudo sed -i -e "s/transportClient\: \(.*\)/transportClient\: true/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/# transportClient\: \(.*\)/transportClient\: true/g" ${A4C_CONFIG}
   # set the elsaticsearch hosts
-  sudo sed -i -e "s/hosts\: \(.*\)/hosts\: $es_list/g" ${A4C_CONFIG}
+  sudo sed -i -e "s/# hosts\: \(.*\)/hosts\: $es_list/g" ${A4C_CONFIG}
 
   # get the cluster name
   cluster_name=$(</tmp/a4c/work/${NODE}/cluster_name)
   echo "The ElasticSearch cluster is: ${cluster_name}"
   # replace the cluster name in alien config
   sudo sed -i -e "s/clusterName\: \(.*\)/clusterName\: $cluster_name/g" ${A4C_CONFIG}
-  sudo bash -c 'echo "cluster.name: ${cluster_name}" > /etc/alien4cloud/elasticsearch.yml'
+  sudo bash -c 'echo "cluster.name: ${cluster_name}" > /opt/alien4cloud/alien4cloud-premium/config/elasticsearch.yml'
 fi
 
 # enable HA if A4C is connected to a Consul agent
@@ -112,4 +114,3 @@ else
   echo "A4C is not connected to Consul, desactivate HA"
   sudo sed -i -e "s/ha_enabled\: \(.*\)/ha_enabled\: false/g" ${A4C_CONFIG}
 fi
-

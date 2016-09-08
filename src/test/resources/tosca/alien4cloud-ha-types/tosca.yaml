@@ -181,10 +181,11 @@ node_types:
       icon: /images/alien4cloud-logo.png
     properties:
       alien_url:
-        description: The URL where to download A4C archive.
+        description: The URL where to download premium A4C archive.
         type: string
         required: true
-        default: "https://fastconnect.org/maven/service/local/repositories/opensource/content/alien4cloud/alien4cloud-ui/1.1.0-SM8/alien4cloud-ui-1.1.0-SM8-standalone.war"
+        default: "https://fastconnect.org/maven/content/repositories/fastconnect/alien4cloud/alien4cloud-premium-dist/1.3.0-SM2/alien4cloud-premium-dist-1.3.0-SM2-dist.tar.gz"
+        #You may provide user and pwd for nexus connection: "https://user:password@fastconnect.org/maven/service/..."
       context_root:
         type: string
         default: "/"
@@ -230,7 +231,7 @@ node_types:
     requirements:
       - elasticsearch: alien.capabilities.ElasticSearch
         type: alien4cloud.relationships.ConnectToElasticSearch
-        lower_bound: 1
+        lower_bound: 0
         upper_bound: 1
       - consul: alien4cloud.consul.capabilities.ConsulAgent
         type: alien4cloud.consul.relationships.ConnectToConsulAgent
@@ -241,8 +242,8 @@ node_types:
         create:
           inputs:
             APPLICATION_URL: { get_property: [SELF, alien_url] }
-            APP_ARGS: { get_property: [SELF, app_args] }
-            JVM_ARGS: { get_property: [SELF, jvm_args] }
+            # APP_ARGS: { get_property: [SELF, app_args] }
+            # JVM_ARGS: { get_property: [SELF, jvm_args] }
             ALIEN_VERSION: { get_property: [SELF, alien_version] }
             DATA_DIR: { get_property: [SELF, data_dir] }
           implementation: scripts/alien/install_alien.sh
@@ -260,6 +261,8 @@ node_types:
           implementation: scripts/alien/config_alien.sh
         start:
           inputs:
+            APP_ARGS: { get_property: [SELF, app_args] }
+            JVM_ARGS: { get_property: [SELF, jvm_args] }
             ALIEN_IP: { get_attribute: [HOST, ip_address] }
             ALIEN_PORT: { get_property: [SELF, listen_port] }
             SERVER_PROTOCOL: { get_property: [SELF, server_protocol] }
@@ -496,7 +499,7 @@ relationship_types:
       - commons: scripts/commons
         type: tosca.artifacts.File
   alien4cloud.consul.relationships.ConnectToConsulAgent:
-    derived_from: tosca.relationships.Root
+    derived_from: tosca.relationships.ConnectsTo
     valid_target_types: [alien4cloud.consul.capabilities.ConsulAgent]
     valid_source_types: [alien4cloud.consul.capabilities.ConsulClient]
     interfaces:
