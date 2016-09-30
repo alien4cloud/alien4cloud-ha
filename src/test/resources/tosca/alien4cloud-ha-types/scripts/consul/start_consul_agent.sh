@@ -37,7 +37,7 @@ fi
 
 echo "Start consul agent in ${CONSUL_AGENT_MODE} mode, expecting ${BOOTSTRAP_EXPECT} servers, data dir at ${CONSUL_DATA_DIR}, bind on interface ${CONSUL_BIND_ADDRESS}"
 
-nohup sudo bash -c 'consul agent -config-dir /etc/consul > /var/log/consul/consul.log 2>&1 &' >> /dev/null 2>&1 &
+nohup sudo bash -c 'consul agent -ui -config-dir /etc/consul > /var/log/consul/consul.log 2>&1 &' >> /dev/null 2>&1 &
 
 sleep 2
 echo "Consul has following members until now"
