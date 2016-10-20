@@ -57,11 +57,11 @@ wait_for_server() {
 }
 
 cd /opt/alien4cloud/alien4cloud-premium
-sudo mkdir -p WEB-INF/lib
-sudo mv lib/* WEB-INF/lib/
-WAR_FILE=$(ls alien4cloud-ui-*.war)
-sudo jar -uf0 $WAR_FILE WEB-INF/lib/*
-sudo rm -rf WEB-INF
+# sudo mkdir -p WEB-INF/lib
+# sudo mv lib/* WEB-INF/lib/
+# WAR_FILE=$(ls alien4cloud-ui-*.war)
+# sudo jar -uf0 $WAR_FILE WEB-INF/lib/*
+# sudo rm -rf WEB-INF
 sudo mkdir -p logs
 sudo chmod 777 logs
 nohup sudo bash -c "/opt/alien4cloud/alien4cloud-premium/alien4cloud.sh ${APP_ARGS} >> logs/vm.out 2>&1 &" >> /dev/null 2>&1 &
