@@ -1,0 +1,97 @@
+tosca_definitions_version: alien_dsl_1_4_0
+
+template_name: alien4cloud-ha-topo-minimal
+template_version: 1.0.0-SNAPSHOT
+template_author: Fastconnect
+
+imports:
+  - "alien4cloud-ha-types:1.4.0-SNAPSHOT"
+  - "tosca-normative-types:1.0.0-ALIEN14"
+  - "jdk-type:1.4.0-SNAPSHOT"
+
+repositories:
+  fastconnect_nexus_opensource:
+    url: https://fastconnect.org/maven/content/repositories/opensource
+    type: maven
+  fastconnect_nexus_opensource_snapshot:
+    url: https://fastconnect.org/maven/content/repositories/opensource-snapshot/
+    type: maven
+  fastconnect_nexus_private:
+    url: https://fastconnect.org/maven/content/repositories/fastconnect
+    type: maven  
+  fastconnect_nexus_private_snapshot:
+    url: https://fastconnect.org/maven/content/repositories/fastconnect-snapshot
+    type: maven
+
+topology_template:
+
+  inputs:
+    alien_version:
+      description: The A4C version to deploy.
+      type: string
+      required: true
+      default: 1.4.0-SNAPSHOT        
+    alien_port:
+      description: The A4C webapps will listen on this port.
+      type: integer
+      required: true
+      default: 8080
+    alien_protocol:
+      type: string
+      required: true
+      default: http
+      constraints:
+        - valid_values: ["http", "https"]
+    alien_data_dir:
+      description: The location where A4C will store data on local FS.
+      type: string
+      required: true
+      default: "/opt/alien4cloud/data"
+    ssl_ca_passphrase:
+      description: The passphrase for the CA certificate.
+      type: string
+      required: false
+      default: "dontChangeIt"
+  input_artifacts:
+    alien_dist:
+      file: alien4cloud:alien4cloud-premium-dist:1.4.0-SNAPSHOT:dist@tar.gz
+      repository: fastconnect_nexus_private_snapshot
+      type: tosca.artifacts.File            
+  outputs:
+    alien_url:
+      description: The URL to access A4C.
+      value: { get_attribute: [ Alien, alien_url ] }
+
+  node_templates:
+
+    AlienCompute:
+      type: tosca.nodes.Compute
+      capabilities:
+        scalable:
+          properties:
+            max_instances: 1
+            min_instances: 1
+            default_instances: 1
+    AlienJDK:
+      type: org.alien4cloud.nodes.JDK
+      requirements:
+        - host: AlienCompute
+    Alien:
+      type: org.alien4cloud.alien.nodes.Alien
+      properties:
+        app_args: "--spring.profiles.active=security-demo,noApiDoc"
+        jvm_args: "-Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=4000,suspend=n"
+        component_version: { get_input: alien_version }
+        listen_port: { get_input: alien_port }
+        data_dir: { get_input: alien_data_dir }
+        server_protocol: { get_input: alien_protocol }
+        ca_passphrase: { get_input: ssl_ca_passphrase }
+      requirements:
+        - java:
+            node: AlienJDK
+            capability: org.alien4cloud.capabilities.JDK
+            relationship: org.alien4cloud.relationships.JavaSoftwareHostedOnJDK
+      artifacts:
+        alien_dist:
+          file: { get_input_artifact: alien_dist }
+          type: tosca.artifacts.File            

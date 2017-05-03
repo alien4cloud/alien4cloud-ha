@@ -1,16 +1,33 @@
-tosca_definitions_version: alien_dsl_1_1_0
+tosca_definitions_version: alien_dsl_1_4_0
 
 template_name: alien4cloud-ha-types
-template_version: 1.0.0-SNAPSHOT
+template_version: 1.4.0-SNAPSHOT
 template_author: Fastconnect
 
 imports:
-  - "tosca-normative-types:1.0.0-SNAPSHOT"
-  - "jdk-type:1.0.0-SNAPSHOT"
+  - "tosca-normative-types:1.0.0-ALIEN14"
+  - "jdk-type:1.4.0-SNAPSHOT"
+
+# repositories:
+#   fastconnect_nexus:
+#     url: https://fastconnect.org/maven/content/repositories/opensource
+#     type: maven
+#   #fastconnect_nexus_snapshot:
+#   #  url: https://fastconnect.org/maven/content/repositories/opensource-snapshot/
+#   #  type: maven
+#   fastconnect_nexus_snapshot_http:
+#     url: https://fastconnect.org/maven/content/repositories/opensource-snapshot/alien4cloud/alien4cloud-dist/1.4.0-SNAPSHOT/
+#     type: http
+#   fastconnect_private_snapshot_http:
+#     url: https://fastconnect.org/maven/content/repositories/fastconnect-snapshot/alien4cloud/alien4cloud-premium-dist/1.4.0-SNAPSHOT/
+#     type: http
+#   fastconnect_nexus_private_snapshot:
+#    url: https://fastconnect.org/maven/content/repositories/fastconnect-snapshot
+#    type: maven
 
 node_types:
 
-  alien4cloud.consul.nodes.ConsulAgent:
+  org.alien4cloud.consul.nodes.ConsulAgent:
     abstract: true
     derived_from: tosca.nodes.SoftwareComponent
     description: >
@@ -18,7 +35,9 @@ node_types:
     tags:
       icon: /images/consul.png
     capabilities:
-      consul_agent: alien4cloud.consul.capabilities.ConsulAgent
+      consul_agent: 
+        type: org.alien4cloud.consul.capabilities.ConsulAgent
+        valid_source_types: [org.alien4cloud.consul.capabilities.ConsulClient]
     properties:
       download_url:
         description: The URL to download the consul archive.
@@ -48,8 +67,8 @@ node_types:
     #   consul_server_address: { get_operation_output: [ SELF, Standard, start, CONSUL_SERVER_ADDRESS ] }
     #   api_port: { get_operation_output: [ SELF, Standard, start, API_PORT ] }
 
-  alien4cloud.consul.nodes.ConsulServer:
-    derived_from: alien4cloud.consul.nodes.ConsulAgent
+  org.alien4cloud.consul.nodes.ConsulServer:
+    derived_from: org.alien4cloud.consul.nodes.ConsulAgent
     description: >
       Consul discovery service installation (server node).
     properties:
@@ -61,7 +80,9 @@ node_types:
         required: true
         default: server
     capabilities:
-      consul_server: alien4cloud.consul.capabilities.ConsulServer
+      consul_server: 
+        type: org.alien4cloud.consul.capabilities.ConsulServer
+        valid_source_types: [org.alien4cloud.consul.capabilities.ConsulClient]
     interfaces:
       Standard:
         create:
@@ -84,15 +105,18 @@ node_types:
             CONSUL_ADDRESS: { get_attribute: [HOST, ip_address] }
           implementation: scripts/consul/join_consul_servers.sh
     artifacts:
-      - configs: config/consul
-        type: tosca.artifacts.File
-      - ssl: ssl
-        type: tosca.artifacts.File
-      - commons: scripts/commons
-        type: tosca.artifacts.File
+      - configs: 
+          file: config/consul
+          type: tosca.artifacts.File
+      - ssl: 
+          file: ssl
+          type: tosca.artifacts.File
+      - commons: 
+          file: scripts/commons
+          type: tosca.artifacts.File
 
-  alien4cloud.consul.nodes.ConsulClient:
-    derived_from: alien4cloud.consul.nodes.ConsulAgent
+  org.alien4cloud.consul.nodes.ConsulClient:
+    derived_from: org.alien4cloud.consul.nodes.ConsulAgent
     description: >
       Consul discovery service installation (client node).
     properties:
@@ -103,8 +127,9 @@ node_types:
           - equal: client
         default: client
     requirements:
-      - consul_server: alien4cloud.consul.capabilities.ConsulServer
-        type: alien4cloud.consul.relationships.JoinCluster
+      - consul_server: 
+          capability: org.alien4cloud.consul.capabilities.ConsulServer
+          relationship: org.alien4cloud.consul.relationships.JoinCluster
     interfaces:
       Standard:
         create:
@@ -123,15 +148,18 @@ node_types:
             ENCRYPT_KEY: { get_property: [SELF, encrypt_key] }
           implementation: scripts/consul/start_consul_agent.sh
     artifacts:
-      - configs: config/consul
-        type: tosca.artifacts.File
-      - ssl: ssl
-        type: tosca.artifacts.File
-      - commons: scripts/commons
-        type: tosca.artifacts.File
+      - configs: 
+          file: config/consul
+          type: tosca.artifacts.File
+      - ssl: 
+          file: ssl
+          type: tosca.artifacts.File
+      - commons: 
+          file: scripts/commons
+          type: tosca.artifacts.File
 
-  alien.nodes.ElasticSearch:
-    derived_from: alien.nodes.JavaSoftware
+  org.alien4cloud.elasticsearch.nodes.ElasticSearch:
+    derived_from: org.alien4cloud.nodes.JavaSoftware
     description: >
       Installation of replicated ElasticSearch (if this node is scaled, will be replicated).
     tags:
@@ -152,8 +180,9 @@ node_types:
         default: "escluster"
     capabilities:
       elasticsearch:
-        type: alien.capabilities.ElasticSearch
-        upper_bound: unbounded
+        type: org.alien4cloud.elasticsearch.capabilities.ElasticSearch
+        occurrences: [ 0, UNBOUNDED ]
+        valid_source_types: [org.alien4cloud.elasticsearch.capabilities.ElasticSearchClient]
     interfaces:
       Standard:
         create:
@@ -168,24 +197,20 @@ node_types:
         start:
           implementation: scripts/elasticsearch/start_elasticsearch.sh
     artifacts:
-      - configs: config/elasticsearch
-        type: tosca.artifacts.File
-      - commons: scripts/commons
-        type: tosca.artifacts.File
+      - configs: 
+          file: config/elasticsearch
+          type: tosca.artifacts.File
+      - commons: 
+          file: scripts/commons
+          type: tosca.artifacts.File
 
-  alien.nodes.Alien:
-    derived_from: alien.nodes.JavaSoftware
+  org.alien4cloud.alien.nodes.Alien:
+    derived_from: org.alien4cloud.nodes.JavaSoftware
     description: >
       The TOSCA Alien Node Type represents an alien webapp.
     tags:
       icon: /images/alien4cloud-logo.png
     properties:
-      alien_url:
-        description: The URL where to download premium A4C archive.
-        type: string
-        required: true
-        default: "https://fastconnect.org/maven/content/repositories/fastconnect/alien4cloud/alien4cloud-premium-dist/1.3.0-SM2/alien4cloud-premium-dist-1.3.0-SM2-dist.tar.gz"
-        #You may provide user and pwd for nexus connection: "https://user:password@fastconnect.org/maven/service/..."
       context_root:
         type: string
         default: "/"
@@ -204,7 +229,7 @@ node_types:
         type: integer
         required: true
         default: 8080
-      alien_version:
+      component_version:
         description: The version of A4C (important in create stage).
         type: string
         required: true
@@ -225,18 +250,18 @@ node_types:
         required: false
     capabilities:
       consul:
-        type: alien4cloud.consul.capabilities.ConsulClient
+        type: org.alien4cloud.consul.capabilities.ConsulClient
       elasticsearch:
-        type: alien.capabilities.ElasticSearchClient
+        type: org.alien4cloud.elasticsearch.capabilities.ElasticSearchClient
     requirements:
-      - elasticsearch: alien.capabilities.ElasticSearch
-        type: alien4cloud.relationships.ConnectToElasticSearch
-        lower_bound: 0
-        upper_bound: 1
-      - consul: alien4cloud.consul.capabilities.ConsulAgent
-        type: alien4cloud.consul.relationships.ConnectToConsulAgent
-        lower_bound: 0
-        upper_bound: 1
+      - elasticsearch: 
+          capability: org.alien4cloud.elasticsearch.capabilities.ElasticSearch
+          relationship: org.alien4cloud.alien.relationships.ConnectToElasticSearch
+          occurrences: [ 0, 1 ]
+      - consul: 
+          capability: org.alien4cloud.consul.capabilities.ConsulAgent
+          relationship: org.alien4cloud.consul.relationships.ConnectToConsulAgent
+          occurrences: [ 0, 1 ]
     interfaces:
       Standard:
         create:
@@ -244,7 +269,7 @@ node_types:
             APPLICATION_URL: { get_property: [SELF, alien_url] }
             # APP_ARGS: { get_property: [SELF, app_args] }
             # JVM_ARGS: { get_property: [SELF, jvm_args] }
-            ALIEN_VERSION: { get_property: [SELF, alien_version] }
+            ALIEN_VERSION: { get_property: [SELF, component_version] }
             DATA_DIR: { get_property: [SELF, data_dir] }
           implementation: scripts/alien/install_alien.sh
         configure:
@@ -268,14 +293,31 @@ node_types:
             SERVER_PROTOCOL: { get_property: [SELF, server_protocol] }
           implementation: scripts/alien/start_alien.sh
     artifacts:
-      - bin: bin
-        type: tosca.artifacts.File
-      - ssl: ssl
-        type: tosca.artifacts.File
-      - commons: scripts/commons
-        type: tosca.artifacts.File
+      - bin: 
+          file: bin
+          type: tosca.artifacts.File
+      - ssl: 
+          file: ssl
+          type: tosca.artifacts.File
+      - commons: 
+          file: scripts/commons
+          type: tosca.artifacts.File
+      # - maven_artifact:
+      #     file: alien4cloud:alien4cloud-dist:1.4.0-SNAPSHOT@tar.gz
+      #     repository: fastconnect_nexus_snapshot
+      #     type: tosca.artifacts.File
+      # - alien_dist:
+      #     file: alien4cloud-premium-dist-1.4.0-20170408.081834-13-dist.tar.gz
+      #     repository: fastconnect_private_snapshot_http
+      #     type: tosca.artifacts.File
+      - alien_dist:
+          # file: alien4cloud:alien4cloud-premium-dist:1.4.0-SNAPSHOT:dist@tar.gz
+          # repository: fastconnect_nexus_private_snapshot
+          type: tosca.artifacts.File
+    attributes:
+      alien_url: { concat: [get_property: [SELF, server_protocol], "://", get_attribute: [HOST, public_ip_address], ":", get_property: [SELF, listen_port]] }
 
-  alien.ha.types.Nginx:
+  org.alien4cloud.nginx.nodes.Nginx:
     derived_from: tosca.nodes.SoftwareComponent
     description: >
       NGINX web server and reverse proxy installation.
@@ -320,14 +362,17 @@ node_types:
         start:
           implementation: scripts/nginx/start.sh
     artifacts:
-      - config: config/nginx
-        type: tosca.artifacts.File
-      - ssl: ssl
-        type: tosca.artifacts.File
-      - commons: scripts/commons
-        type: tosca.artifacts.File
+      - config: 
+          file: config/nginx
+          type: tosca.artifacts.File
+      - ssl: 
+          file: ssl
+          type: tosca.artifacts.File
+      - commons: 
+          file: scripts/commons
+          type: tosca.artifacts.File
 
-  alien.ha.types.ConsulTemplate4Nginx:
+  org.alien4cloud.nginx.nodes.ConsulTemplate4Nginx:
     derived_from: tosca.nodes.SoftwareComponent
     description: |
       Consul-Template is a smart tool that can listen for consul changes,
@@ -337,12 +382,12 @@ node_types:
       icon: /images/consul_template.png
     capabilities:
       consul:
-        type: alien4cloud.consul.capabilities.ConsulClient
+        type: org.alien4cloud.consul.capabilities.ConsulClient
     requirements:
-      - consul: alien4cloud.consul.capabilities.ConsulAgent
-        type: alien4cloud.consul.relationships.ConnectToConsulAgent
-        lower_bound: 1
-        upper_bound: 1
+      - consul: 
+          capability: org.alien4cloud.consul.capabilities.ConsulAgent
+          relationship: org.alien4cloud.consul.relationships.ConnectToConsulAgent
+          occurrences: [ 1, 1 ]
     properties:
       download_url:
         type: string
@@ -382,14 +427,17 @@ node_types:
         start:
           implementation: scripts/consul_template/start.sh
     artifacts:
-      - config: config/consul_template
-        type: tosca.artifacts.File
-      - ssl: ssl
-        type: tosca.artifacts.File
-      - commons: scripts/commons
-        type: tosca.artifacts.File
+      - config: 
+          file: config/consul_template
+          type: tosca.artifacts.File
+      - ssl: 
+          file: ssl
+          type: tosca.artifacts.File
+      - commons: 
+          file: scripts/commons
+          type: tosca.artifacts.File
 
-  alien4cloud.samba.nodes.SambaServer:
+  org.alien4cloud.samba.nodes.SambaServer:
     derived_from: tosca.nodes.SoftwareComponent
     description: >
       Configure a samba server
@@ -403,7 +451,7 @@ node_types:
         type: string
         default: "/srv/samba/alien4cloud"
     capabilities:
-      smb_server: alien4cloud.samba.capabilities.SambaServer
+      smb_server: org.alien4cloud.samba.capabilities.SambaServer
     interfaces:
       Standard:
         create: scripts/smbServer/install.sh
@@ -415,12 +463,14 @@ node_types:
         start: scripts/smbServer/start.sh
         stop: scripts/smbServer/stop.sh
     artifacts:
-      - config: config/samba/smb.conf
-        type: tosca.artifacts.File
-      - commons: scripts/commons
-        type: tosca.artifacts.File
+      - config: 
+          file: config/samba/smb.conf
+          type: tosca.artifacts.File
+      - commons: 
+          file: scripts/commons
+          type: tosca.artifacts.File
 
-  alien4cloud.samba.nodes.SambaClient:
+  org.alien4cloud.samba.nodes.SambaClient:
     derived_from: tosca.nodes.SoftwareComponent
     description: >
       Configure a samba client
@@ -431,18 +481,20 @@ node_types:
         type: string
         default: "/var/alien4cloud"
     requirements:
-      - smb_server: alien4cloud.samba.capabilities.SambaServer
-        type: alien4cloud.samba.relationships.ConnectsToSambaServer
+      - smb_server: 
+          capability: org.alien4cloud.samba.capabilities.SambaServer
+          relationship: org.alien4cloud.samba.relationships.ConnectsToSambaServer
     interfaces:
       Standard:
         create: scripts/smbClient/install.sh
     artifacts:
-      - commons: scripts/commons
-        type: tosca.artifacts.File
+      - commons: 
+          file: scripts/commons
+          type: tosca.artifacts.File
 
 capability_types:
 
-  alien4cloud.consul.capabilities.ConsulAgent:
+  org.alien4cloud.consul.capabilities.ConsulAgent:
     derived_from: tosca.capabilities.Root
     description: >
       A consul agent (server or client) exposes this capability.
@@ -452,7 +504,7 @@ capability_types:
         description: Port for http/https API.
         required: true
         default: 8500
-  alien4cloud.consul.capabilities.ConsulClient:
+  org.alien4cloud.consul.capabilities.ConsulClient:
     derived_from: tosca.capabilities.Root
     description: >
       The capability to connect to a consul agent using the consul API.
@@ -466,29 +518,28 @@ capability_types:
         type: string
         description: the passphrase for the CA certificate
         required: false
-  alien4cloud.consul.capabilities.ConsulServer:
+  org.alien4cloud.consul.capabilities.ConsulServer:
     derived_from: tosca.capabilities.Root
     description: >
       Exposed by a consul server agent.
-  alien.capabilities.ElasticSearch:
+  org.alien4cloud.elasticsearch.capabilities.ElasticSearch:
     derived_from: tosca.capabilities.Root
     description: >
       Exposed by a ElasticSearch node.
-  alien.capabilities.ElasticSearchClient:
+  org.alien4cloud.elasticsearch.capabilities.ElasticSearchClient:
     derived_from: tosca.capabilities.Root
     description: >
       The capability to connect to a ElasticSearch cluster.
-  alien4cloud.samba.capabilities.SambaServer:
+  org.alien4cloud.samba.capabilities.SambaServer:
     derived_from: tosca.capabilities.Root
 
 relationship_types:
 
-  alien4cloud.consul.relationships.JoinCluster:
+  org.alien4cloud.consul.relationships.JoinCluster:
     derived_from: tosca.relationships.ConnectsTo
     description: >
       The relationship between a consul client agent and a consul server agent.
-    valid_target_types: [alien4cloud.consul.capabilities.ConsulServer]
-    valid_source_types: [alien4cloud.consul.capabilities.ConsulClient]
+    valid_target_types: [org.alien4cloud.consul.capabilities.ConsulServer]
     interfaces:
       Configure:
         add_target:
@@ -496,12 +547,12 @@ relationship_types:
             CONSUL_SERVER_ADDRESS: { get_attribute: [TARGET, ip_address] }
           implementation: scripts/consul/join_consul_cluster.sh
     artifacts:
-      - commons: scripts/commons
-        type: tosca.artifacts.File
-  alien4cloud.consul.relationships.ConnectToConsulAgent:
+      - commons: 
+          file: scripts/commons
+          type: tosca.artifacts.File
+  org.alien4cloud.consul.relationships.ConnectToConsulAgent:
     derived_from: tosca.relationships.ConnectsTo
-    valid_target_types: [alien4cloud.consul.capabilities.ConsulAgent]
-    valid_source_types: [alien4cloud.consul.capabilities.ConsulClient]
+    valid_target_types: [org.alien4cloud.consul.capabilities.ConsulAgent]
     interfaces:
       Configure:
         pre_configure_source:
@@ -514,14 +565,15 @@ relationship_types:
             AGENT_API_PORT: { get_property: [TARGET, consul_agent, api_port] }
           implementation: scripts/ConnectToConsulAgent/pre_configure_source.sh
     artifacts:
-      - ssl: ssl
-        type: tosca.artifacts.File
-      - commons: scripts/commons
-        type: tosca.artifacts.File
-  alien4cloud.relationships.ConnectToElasticSearch:
+      - ssl: 
+          file: ssl
+          type: tosca.artifacts.File
+      - commons: 
+          file: scripts/commons
+          type: tosca.artifacts.File
+  org.alien4cloud.alien.relationships.ConnectToElasticSearch:
     derived_from: tosca.relationships.ConnectsTo
-    valid_target_types: [alien.capabilities.ElasticSearch]
-    valid_source_types: [alien.capabilities.ElasticSearchClient]
+    valid_target_types: [org.alien4cloud.elasticsearch.capabilities.ElasticSearch]
     interfaces:
       Configure:
         pre_configure_source:
@@ -531,11 +583,12 @@ relationship_types:
             CLUSTER_NAME: { get_property: [TARGET, cluster_name] }
           implementation: scripts/elasticsearch/ConnectToElasticSearch/pre_configure_source.sh
     artifacts:
-      - commons: scripts/commons
-        type: tosca.artifacts.File
-  alien4cloud.samba.relationships.ConnectsToSambaServer:
+      - commons: 
+          file: scripts/commons
+          type: tosca.artifacts.File
+  org.alien4cloud.samba.relationships.ConnectsToSambaServer:
     derived_from: tosca.relationships.ConnectsTo
-    valid_target_types: [alien4cloud.samba.capabilities.SambaServer]
+    valid_target_types: [org.alien4cloud.samba.capabilities.SambaServer]
     properties:
       mount_point:
         type: string
@@ -553,5 +606,6 @@ relationship_types:
             MOUNT_POINT: { get_property: [SELF, mount_point] }
           implementation: scripts/smbClient/remove_target.sh
     artifacts:
-      - commons: scripts/commons
-        type: tosca.artifacts.File
+      - commons: 
+          file: scripts/commons
+          type: tosca.artifacts.File

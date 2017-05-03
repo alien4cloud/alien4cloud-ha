@@ -3,7 +3,7 @@ source $commons/commons.sh
 
 install_dependencies "unzip"
 require_bin "jar"
-require_envs "APPLICATION_URL DATA_DIR ALIEN_VERSION"
+require_envs "DATA_DIR ALIEN_VERSION"
 
 # create user
 sudo useradd alien4cloud
@@ -37,8 +37,12 @@ if [ ! -d $DATA_DIR ]; then
 fi
 
 # download files
-download "Alien4Cloud" "${APPLICATION_URL}" /tmp/alien4cloud/alien4cloud-premium-dist.tar.gz
-sudo tar -xzf /tmp/alien4cloud/alien4cloud-premium-dist.tar.gz -C /opt/alien4cloud
+#download "Alien4Cloud" "${APPLICATION_URL}" /tmp/alien4cloud/alien4cloud-premium-dist.tar.gz
+sudo tar -xzf $alien_dist -C /opt/alien4cloud
+# we want premium version to have the same dir name
+if [ -d /opt/alien4cloud/alien4cloud-premium ]; then
+	sudo mv -f /opt/alien4cloud/alien4cloud-premium /opt/alien4cloud/alien4cloud
+fi
 
 # add config
 sudo rm -rf /tmp/alien4cloud

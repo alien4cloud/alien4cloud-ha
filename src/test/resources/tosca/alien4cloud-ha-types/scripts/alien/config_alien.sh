@@ -4,7 +4,7 @@ source $commons/ssl.sh
 
 require_envs "DATA_DIR SERVER_PROTOCOL ALIEN_PORT"
 
-A4C_CONFIG="/opt/alien4cloud/alien4cloud-premium/config/alien4cloud-config.yml"
+A4C_CONFIG="/opt/alien4cloud/alien4cloud/config/alien4cloud-config.yml"
 
 # replace the alien data dir
 echo "A4C data dir is ${DATA_DIR}"
@@ -61,7 +61,7 @@ else
   echo "The ElasticSearch cluster is: ${cluster_name}"
   # replace the cluster name in alien config
   sudo sed -i -e "s/clusterName\: \(.*\)/clusterName\: $cluster_name/g" ${A4C_CONFIG}
-  sudo bash -c 'echo "cluster.name: ${cluster_name}" > /opt/alien4cloud/alien4cloud-premium/config/elasticsearch.yml'
+  sudo bash -c 'echo "cluster.name: ${cluster_name}" > /opt/alien4cloud/alien4cloud/config/elasticsearch.yml'
 fi
 
 # enable HA if A4C is connected to a Consul agent
