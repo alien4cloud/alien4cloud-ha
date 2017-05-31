@@ -183,6 +183,10 @@ node_types:
         type: org.alien4cloud.elasticsearch.capabilities.ElasticSearch
         occurrences: [ 0, UNBOUNDED ]
         valid_source_types: [org.alien4cloud.elasticsearch.capabilities.ElasticSearchClient]
+      http:
+        type: org.alien4cloud.elasticsearch.capabilities.ElasticSearchHttpEndpoint
+        occurrences: [ 0, UNBOUNDED ]
+        valid_source_types: [org.alien4cloud.elasticsearch.capabilities.ElasticSearchHttpClient]        
     interfaces:
       Standard:
         create:
@@ -193,6 +197,7 @@ node_types:
           inputs:
             ES_IP: { get_attribute: [HOST, ip_address] }
             CLUSTER_NAME: { get_property: [SELF, cluster_name] }
+            HTTP_PORT: { get_property: [SELF, http, port] }
           implementation: scripts/elasticsearch/configure_elasticsearch.sh
         start:
           implementation: scripts/elasticsearch/start_elasticsearch.sh
@@ -253,6 +258,8 @@ node_types:
         type: org.alien4cloud.consul.capabilities.ConsulClient
       elasticsearch:
         type: org.alien4cloud.elasticsearch.capabilities.ElasticSearchClient
+      jolokia:
+        type: org.alien4cloud.alien.capabilities.JolokiaEndpoint           
     requirements:
       - elasticsearch: 
           capability: org.alien4cloud.elasticsearch.capabilities.ElasticSearch
@@ -296,6 +303,9 @@ node_types:
       - bin: 
           file: bin
           type: tosca.artifacts.File
+      - config: 
+          file: config/alien
+          type: tosca.artifacts.File          
       - ssl: 
           file: ssl
           type: tosca.artifacts.File
@@ -530,9 +540,39 @@ capability_types:
     derived_from: tosca.capabilities.Root
     description: >
       The capability to connect to a ElasticSearch cluster.
+  org.alien4cloud.elasticsearch.capabilities.ElasticSearchHttpEndpoint:
+    derived_from: tosca.capabilities.Endpoint
+    description: >
+      The HTTP endpoint exposed by elasticsearch.
+    properties:
+      port:
+        type: integer
+        description: The port of the elasticsearch HTTP endpoint.
+        required: true
+        default: 9200
+        constraints:
+          - in_range: [ 1, 65535 ]
+      protocol:
+        type: string
+        required: true
+        default: http          
+  org.alien4cloud.elasticsearch.capabilities.ElasticSearchHttpClient:
+    derived_from: tosca.capabilities.Root
+    description: >
+      The capability to connect to a ElasticSearch HTTP endpoint.    
   org.alien4cloud.samba.capabilities.SambaServer:
     derived_from: tosca.capabilities.Root
-
+  org.alien4cloud.alien.capabilities.JolokiaEndpoint:
+    description: >
+      Exposed by a java sofware that embed jolokia jar to expose JMX metrics.    
+    derived_from: tosca.capabilities.Root
+    properties:
+      jolokia_port:
+        type: integer
+        description: the port on witch the javaagent will listen
+        required: true
+        default: 8778
+        
 relationship_types:
 
   org.alien4cloud.consul.relationships.JoinCluster:

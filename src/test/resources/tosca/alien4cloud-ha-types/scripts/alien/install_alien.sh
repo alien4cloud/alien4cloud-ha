@@ -19,6 +19,11 @@ if [ ! -d /etc/alien4cloud ]; then
   sudo mkdir -p /etc/alien4cloud
 fi
 
+echo "Make etc env dir"
+if [ ! -d /etc/alien4cloud/env ]; then
+  sudo mkdir -p /etc/alien4cloud/env
+fi
+
 echo "Make tmp dir"
 if [ ! -d /tmp/alien4cloud ]; then
 	sudo mkdir -p /tmp/alien4cloud
@@ -51,3 +56,11 @@ sudo rm -rf /tmp/alien4cloud
 echo "Change folder ownership"
 sudo chown -R alien4cloud:alien4cloud /opt/alien4cloud
 
+# can be removed as soon as $JAVA_EXT_OPTIONS is added in JAVA options in dist
+# (but can be necessary if a version before 1.4.0-RC3 is used)
+# sudo cp -f $config/alien4cloud.sh /opt/alien4cloud/alien4cloud/
+# sudo sed -i -e "s/%ALIEN_VERSION%/${ALIEN_VERSION}/g" /opt/alien4cloud/alien4cloud/alien4cloud.sh
+# sudo chmod +x /opt/alien4cloud/alien4cloud/alien4cloud.sh
+# sudo cp -f $config/alien4cloud-ssl.sh /opt/alien4cloud/alien4cloud/
+# sudo sed -i -e "s/%ALIEN_VERSION%/${ALIEN_VERSION}/g" /opt/alien4cloud/alien4cloud/alien4cloud-ssl.sh
+# sudo chmod +x /opt/alien4cloud/alien4cloud/alien4cloud-ssl.sh

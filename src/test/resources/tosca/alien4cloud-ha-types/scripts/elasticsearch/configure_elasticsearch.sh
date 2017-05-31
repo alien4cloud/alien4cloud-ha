@@ -2,6 +2,8 @@
 
 # set the cluster name
 sudo sed -i -e "s/cluster\.name\: \(.*\)$i/cluster\.name\: $CLUSTER_NAME/g" /etc/elasticsearch/elasticsearch.yml
+# st the http port
+sudo sed -i -e "s/http\.port\: \(.*\)$i/http\.port\: $HTTP_PORT/g" /etc/elasticsearch/elasticsearch.yml
 
 # Count the number of replicas
 number_of_replicas=$((0))
