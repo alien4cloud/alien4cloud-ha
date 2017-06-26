@@ -221,7 +221,7 @@ index.number_of_replicas: 0
 
 # Set a custom port to listen for HTTP traffic:
 #
-#http.port: 9200
+http.port: 9200
 
 # Set a custom allowed content length:
 #
