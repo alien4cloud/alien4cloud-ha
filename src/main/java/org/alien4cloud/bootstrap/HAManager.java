@@ -102,8 +102,11 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
     @Value("${ha.trustStorePath:#{null}}")
     private String trustStorePath;
 
-    @Value("${ha.keyStoresPwd:#{null}}")
-    private String keyStoresPwd;
+    @Value("${ha.keyStorePwd:#{null}}")
+    private String keyStorePwd;
+
+    @Value("${ha.trustStorePwd:#{null}}")
+    private String trustStorePwd;
 
     @Value("${ha.serverProtocol:http}")
     private String serverProtocol;
@@ -172,14 +175,14 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
                 SSLContext sslContext = SSLContext.getInstance("TLSv1");
 
                 KeyStore ks = KeyStore.getInstance("JKS");
-                ks.load(new FileInputStream(new File(this.keyStorePath)), this.keyStoresPwd.toCharArray());
+                ks.load(new FileInputStream(new File(this.keyStorePath)), this.keyStorePwd.toCharArray());
 
                 KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
                 // FIXME: really necessary ?
-                kmf.init(ks, this.keyStoresPwd.toCharArray());
+                kmf.init(ks, this.keyStorePwd.toCharArray());
 
                 KeyStore ts = KeyStore.getInstance("JKS");
-                ts.load(new FileInputStream(new File(this.trustStorePath)), this.keyStoresPwd.toCharArray());
+                ts.load(new FileInputStream(new File(this.trustStorePath)), this.trustStorePwd.toCharArray());
 
                 TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
                 tmf.init(ts);
