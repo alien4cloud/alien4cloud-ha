@@ -75,10 +75,10 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
     /**
      * When the lock acquisition fail, the delay before retrying to acquire a lock.
      */
-    @Value("${ha.lockAcquisitionDelayInSecond:10}")
+    @Value("${ha.lockAcquisitionDelayInSecond:20}")
     private long lockAcquisitionDelayInSecond;
 
-    @Value("${ha.consulSessionTTLInSecond:1800}")
+    @Value("${ha.consulSessionTTLInSecond:600}")
     private long consulSessionTTLInSecond;
 
     @Value("${ha.consulLockDelayInSecond:15}")
@@ -321,6 +321,28 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
         }
     }
 
+    private void rescheduleSession() {
+        long ttlInSeconde = Math.max(Math.round(consulSessionTTLInSecond * 1000 * renewAsPercentageofSessionTTL) / 1000, 1);
+
+        Optional<String> ttlAsString = session.getTtl();
+        if (ttlAsString.isPresent()) {
+            try {
+                if (log.isTraceEnabled()) {
+                    log.trace("TTL value received: {}", ttlAsString.get());
+                }
+                ttlInSeconde = Long.parseLong(ttlAsString.get().substring(0, ttlAsString.get().length() - 1));
+
+                // renew the session at 80% of its TTL, but never less than 1 second
+                ttlInSeconde = Math.max(Math.round(ttlInSeconde * 1000 * renewAsPercentageofSessionTTL) / 1000, 1);
+                if (log.isTraceEnabled()) {
+                    log.trace("Returned TTL is <{}>, so the session will be renewed in {}s", ttlAsString.get(), ttlInSeconde);
+                }
+            } catch(NumberFormatException e){
+            }
+        }
+        scheduleSessionRenewInSeconds(ttlInSeconde);
+    }
+
     private class SessionRenewer implements Runnable {
 
         @Override
@@ -335,23 +357,9 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
                 }
                 if (session != null) {
                     lastSessionId = session.getId();
-                    long ttlInSeconde = Math.max(Math.round(consulSessionTTLInSecond * 1000 * renewAsPercentageofSessionTTL) / 1000, 1);
-                    Optional<String> ttlAsString = session.getTtl();
-                    if (ttlAsString.isPresent()) {
-                        try {
-                            if (log.isTraceEnabled()) {
-                                log.trace("TTL value received: {}", ttlAsString.get());
-                            }
-                            ttlInSeconde = Long.parseLong(ttlAsString.get().substring(0, ttlAsString.get().length() - 1));
-                            // renew the session at 80% of its TTL, but never less than 1 second
-                            ttlInSeconde = Math.max(Math.round(ttlInSeconde * 1000 * renewAsPercentageofSessionTTL) / 1000, 1);
-                            if (log.isTraceEnabled()) {
-                                log.trace("Returned TTL is <{}>, so the session will be renewed in {}s", ttlAsString.get(), ttlInSeconde);
-                            }
-                        } catch (NumberFormatException e) {
-                        }
-                    }
-                    scheduleSessionRenewInSeconds(ttlInSeconde);
+
+                    rescheduleSession();
+
                     if (sessionWasNull) {
                         // No current session, launch the lock acquisition task
                         scheduleLockAcquisitionInSeconds(0);
@@ -387,6 +395,23 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
             log.trace("Scheduling lock acquisition task in {}s", secondes);
         }
         consulLockAquisitionTaskScheduler.schedule(lockAquisition, startDate);
+    }
+
+    private boolean checkSession() {
+        try {
+            Optional<SessionInfo> sessionInfo = consul.sessionClient().getSessionInfo(lastSessionId);
+            if (sessionInfo.isPresent()) {
+                return true;
+            }
+        } catch(Exception e) {
+            log.warn("Not able to get session info for session <{}>",lastSessionId);
+        }
+
+        // Recreate it after 2 HealthCheck
+        session = null;
+        scheduleSessionRenewInSeconds(2 * healthCheckPeriodInSecond);
+
+        return false;
     }
 
     private SessionInfo renewSession(String sessionId) {
@@ -505,11 +530,13 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
             } catch (Exception e) {
                 log.error("Not able to acquire leadership due to consul exception", e);
                 if (session != null) {
-                    scheduleLockAcquisitionInSeconds(lockAcquisitionDelayInSecond);
+                    if (checkSession()) {
+                        scheduleLockAcquisitionInSeconds(0);
+                    }
                     return;
                 } else {
                     if (log.isTraceEnabled()) {
-                        log.trace("No known consul session while exception occured when trying to acquire leadership, do nothing");
+                        log.warn("No known consul session while exception occured when trying to acquire leadership, do nothing");
                     }
                 }
                 return;
@@ -580,14 +607,22 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
                         if (log.isTraceEnabled()) {
                             log.trace("No session associated to the key, will try to acquire lock");
                         }
-                        acquireLeadership();
+                        if (leader == true) {
+                            acquireLeadership();
+                        } else {
+                            scheduleLockAcquisitionInSeconds(lockAcquisitionDelayInSecond);
+                        }
                         return;
                     }
                 } else {
                     if (log.isTraceEnabled()) {
                         log.trace("No response received, will try to acquire lock");
                     }
-                    acquireLeadership();
+                    if (leader == true) {
+                        acquireLeadership();
+                    } else {
+                        scheduleLockAcquisitionInSeconds(lockAcquisitionDelayInSecond);
+                    }
                     return;
                 }
             } catch (Exception e) {
@@ -610,7 +645,11 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
             sessionLock.lock();
             try {
                 if (session != null) {
-                    scheduleLockAcquisitionInSeconds(lockAcquisitionDelayInSecond);
+                    if (leader == true) {
+                        acquireLeadership();
+                    } else {
+                        scheduleLockAcquisitionInSeconds(lockAcquisitionDelayInSecond);
+                    }
                 } else {
                     if (log.isTraceEnabled()) {
                         log.trace("No known consul session while exception thrown in ConsulResponseCallback, do nothing");
