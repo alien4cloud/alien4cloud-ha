@@ -147,6 +147,8 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
 
     private ThreadPoolTaskScheduler consulLockAquisitionTaskScheduler;
 
+    private ThreadPoolTaskScheduler leaderElectionTaskScheduler;
+
     private SessionRenewer sessionRenewer = new SessionRenewer();
 
     private LockAquisition lockAquisition = new LockAquisition();
@@ -211,6 +213,12 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
         consulLockAquisitionTaskScheduler.setThreadNamePrefix("consul-lock-aquisition-");
         consulLockAquisitionTaskScheduler.setDaemon(false);
         consulLockAquisitionTaskScheduler.initialize();
+
+        leaderElectionTaskScheduler = new ThreadPoolTaskScheduler();
+        leaderElectionTaskScheduler.setPoolSize(1);
+        leaderElectionTaskScheduler.setThreadNamePrefix("leader-election-");
+        leaderElectionTaskScheduler.setDaemon(false);
+        leaderElectionTaskScheduler.initialize();
     }
 
     private void elect() {
@@ -224,7 +232,12 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
             } else {
                 log.info("Becoming leader for the resource {}", LEARDER_KEY);
                 leader = true;
-                alienContext.publishEvent(new HALeaderElectionEvent(this, leader));
+                leaderElectionTaskScheduler.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        alienContext.publishEvent(new HALeaderElectionEvent(this, leader));
+                    }
+                });
             }
         } finally {
             leaderLock.unlock();
@@ -242,7 +255,12 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
             } else {
                 log.info("I'm no more the leader for the resource {}", LEARDER_KEY);
                 leader = false;
-                alienContext.publishEvent(new HALeaderElectionEvent(this, leader));
+                leaderElectionTaskScheduler.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        alienContext.publishEvent(new HALeaderElectionEvent(this, leader));
+                    }
+                });
             }
         } finally {
             leaderLock.unlock();
@@ -273,6 +291,11 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
         }
         try {
             sessionRenewerTaskScheduler.destroy();
+        } catch (Exception e) {
+            log.warn("Not able to destroy session renewer task schedudler", e);
+        }
+        try {
+            leaderElectionTaskScheduler.destroy();
         } catch (Exception e) {
             log.warn("Not able to destroy session renewer task schedudler", e);
         }
