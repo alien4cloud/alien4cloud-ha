@@ -69,6 +69,9 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
     @Value("${ha.instanceIp:#{null}}")
     private String instanceIp;
 
+    @Value("${ha.instanceCheckIp:127.0.0.1}")
+    private String instanceCheckIp;
+
     @Value("${ha.healthCheckPeriodInSecond:5}")
     private long healthCheckPeriodInSecond;
 
@@ -323,7 +326,7 @@ public class HAManager implements ApplicationListener<EmbeddedServletContainerIn
     }
 
     private URL getCheckUrl() throws MalformedURLException {
-        return new URL(serverProtocol + "://" + instanceIp + ":" + listenPort + "/rest/admin/health");
+        return new URL(serverProtocol + "://" + instanceCheckIp + ":" + listenPort + "/rest/admin/health");
     }
 
     /**
