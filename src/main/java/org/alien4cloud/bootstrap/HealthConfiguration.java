@@ -36,6 +36,9 @@ public class HealthConfiguration {
     @Resource
     HealthAggregator healthAggregator;
 
+    @Value("${ha.health_es_timeout:#{1000}}")
+    private long esResponseTimeout;
+
     /**
      * Register a custom health indicator
      * 
@@ -103,7 +106,6 @@ public class HealthConfiguration {
         private final String[] allIndices = { "_all" };
 
         private final Client client;
-        private long responseTimeout = 100L;
 
         public ElasticsearchHealthIndicator(Client client) {
             this.client = client;
@@ -111,7 +113,7 @@ public class HealthConfiguration {
 
         @Override
         protected void doHealthCheck(Health.Builder builder) throws Exception {
-            ClusterHealthResponse response = this.client.admin().cluster().health(Requests.clusterHealthRequest(allIndices)).actionGet(responseTimeout);
+            ClusterHealthResponse response = this.client.admin().cluster().health(Requests.clusterHealthRequest(allIndices)).actionGet(esResponseTimeout);
 
             switch (response.getStatus()) {
             case GREEN:
