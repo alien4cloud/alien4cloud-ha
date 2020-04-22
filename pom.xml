@@ -12,7 +12,7 @@
   <description>Provides support for high availability.</description>
 
   <scm>
-    <connection>scm:git:https://fastconnect.org/gitlab/alien4cloud/alien4cloud-ha.git</connection>
+    <connection>scm:git:https://github.com/alien4cloud/alien4cloud-ha.git</connection>
   </scm>
 
   <distributionManagement>
