@@ -17,12 +17,12 @@
 
   <distributionManagement>
     <repository>
-      <id>repo.internal.fastconnect.org</id>
-      <url>https://fastconnect.org/maven/content/repositories/fastconnect</url>
+      <id>pdl-releases</id>
+      <url>https://www.portaildulibre.fr/nexus/repository/opensource-releases</url>
     </repository>
     <snapshotRepository>
-      <id>repo.internal.snapshot.fastconnect.org</id>
-      <url>https://fastconnect.org/maven/content/repositories/fastconnect-snapshot</url>
+      <id>pdl-snapshots</id>
+      <url>https://www.portaildulibre.fr/nexus/repository/opensource-snapshots</url>
     </snapshotRepository>
   </distributionManagement>
 
